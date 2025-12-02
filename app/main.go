@@ -63,10 +63,13 @@ func typo(args []string) (string, error) {
 	msg := make([]string, len(args))
 	for i, arg := range args {
 		if !slices.Contains(types, arg) {
-			msg[i] = fmt.Sprintf("%s: not found", arg)
+			// msg[i] = fmt.Sprintf("%s: not found", arg)
+			fmt.Println(os.LookupEnv("PATH"))
 			continue
 		}
 		msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
 	}
 	return strings.Join(msg, "\n"), nil
 }
+
+// TODO://consult with claude

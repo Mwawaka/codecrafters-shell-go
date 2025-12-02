@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ type CommandHandler func(args []string) (string, error)
 
 var commands = map[string]CommandHandler{
 	"echo": echo,
+	"type": typo,
 }
 
 func main() {
@@ -44,6 +46,7 @@ func main() {
 		}
 
 		fmt.Printf("%s: command not found\n", cmdName)
+
 	}
 }
 
@@ -52,5 +55,18 @@ func exit() {
 }
 
 func echo(args []string) (string, error) {
-	return strings.Join(args, " "),nil
+	return strings.Join(args, " "), nil
+}
+
+func typo(args []string) (string, error) {
+	types := []string{"echo", "exit", "type"}
+	msg := make([]string, len(args))
+	for i, arg := range args {
+		if !slices.Contains(types, arg) {
+			msg[i] = fmt.Sprintf("%s: not found", arg)
+			continue
+		}
+		msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
+	}
+	return strings.Join(msg, "\n"), nil
 }

@@ -9,7 +9,7 @@ import (
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 	command, err := reader.ReadString('\n')
-	if err == nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "error reading input:", err)
 		os.Exit(1)
 	}

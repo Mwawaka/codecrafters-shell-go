@@ -51,6 +51,7 @@ func main() {
 				continue
 			}
 			if out == "" {
+				// TODO: Ensures turbo tests pass but not required for the shell
 				fmt.Print(out)
 				continue
 			}
@@ -130,7 +131,7 @@ func cd(args []string) error {
 	}
 
 	if len(args) == 0 || args[0] == "~" {
-		return chDirToHome()
+		return chDirToHomeV2()
 	}
 
 	if err := os.Chdir(args[0]); err != nil {
@@ -140,12 +141,17 @@ func cd(args []string) error {
 	return nil
 }
 
-func chDirToHome() error {
+func ChDirToHome() error {
 	u, err := user.Current()
 	if err != nil {
 		return err
 	}
 	return os.Chdir(u.HomeDir)
+}
+
+func chDirToHomeV2()error {
+	// TODO: ensure turbo tests pass
+	return os.Chdir(os.Getenv("HOME"))
 }
 
 // TODO: unique error for 2 args

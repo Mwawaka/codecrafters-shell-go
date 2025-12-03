@@ -48,8 +48,9 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("%s: command not found\n", cmdName)
-
+		if err := externalPrograms(cmdName, parts[1:]); err != nil {
+			fmt.Printf("%s: command not found\n", cmdName)
+		}
 	}
 }
 
@@ -67,14 +68,14 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 
 	for i, arg := range args {
 		_, exists := commands[arg]
-		
+
 		if arg == "exit" || exists {
 			msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
 			continue
 		}
-		
+
 		path, err := exec.LookPath(arg)
-		
+
 		if err != nil {
 			msg[i] = fmt.Sprintf("%s: not found", arg)
 			continue
@@ -83,4 +84,22 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 		msg[i] = fmt.Sprintf("%s is %s", arg, path)
 	}
 	return strings.Join(msg, "\n"), nil
+}
+
+func externalPrograms(file string, args []string) error {
+
+	bin, err := exec.LookPath(file)
+
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(bin, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

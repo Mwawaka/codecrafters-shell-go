@@ -14,6 +14,7 @@ func main() {
 
 	var commands = map[string]CommandHandler{
 		"echo": echo,
+		"pwd":  pwd,
 	}
 
 	commands["type"] = func(args []string) (string, error) {
@@ -99,4 +100,14 @@ func externalPrograms(file string, args []string) error {
 		return err
 	}
 	return nil
+}
+
+func pwd(args []string) (string, error) {
+	path, err := os.Getwd()
+
+	if err != nil {
+		return "", err
+	}
+	
+	return path, nil
 }

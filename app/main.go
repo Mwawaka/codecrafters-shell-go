@@ -50,6 +50,10 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
+			if out == "" {
+				fmt.Print(out)
+				continue
+			}
 			fmt.Println(out)
 			continue
 		}
@@ -143,7 +147,6 @@ func chDirToHome() error {
 	}
 	return os.Chdir(u.HomeDir)
 }
-
 
 // TODO: unique error for 2 args
 // if len(args) == 2 {

@@ -23,7 +23,7 @@ func main() {
 	}
 	commands["cd"] = func(args []string) (string, error) {
 		// TODO:// is this valid
-		return "", cd(args)
+		return "\n", cd(args)
 	}
 
 	reader := bufio.NewReader(os.Stdin)

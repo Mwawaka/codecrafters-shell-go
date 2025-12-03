@@ -70,6 +70,13 @@ func exit() {
 }
 
 func echo(args []string) (string, error) {
+	for _, arg := range args {
+		if strings.Contains(arg, `'`) {
+			// fmt.Println("contains a single quoty")
+			quoteInx := strings.Index(arg, `'`)
+			fmt.Println(quoteInx)
+		}
+	}
 	return strings.Join(args, " "), nil
 }
 
@@ -142,6 +149,7 @@ func cd(args []string) error {
 }
 
 func ChDirToHome() error {
+	// TODO: recommended, portable
 	u, err := user.Current()
 	if err != nil {
 		return err
@@ -149,7 +157,7 @@ func ChDirToHome() error {
 	return os.Chdir(u.HomeDir)
 }
 
-func chDirToHomeV2()error {
+func chDirToHomeV2() error {
 	// TODO: ensure turbo tests pass
 	return os.Chdir(os.Getenv("HOME"))
 }

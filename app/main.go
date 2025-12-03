@@ -23,7 +23,7 @@ func main() {
 	}
 	commands["cd"] = func(args []string) (string, error) {
 		// TODO:// is this valid
-		return "\n", cd(args)
+		return "", cd(args)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -50,7 +50,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			fmt.Print(out)
+			fmt.Println(out)
 			continue
 		}
 
@@ -76,14 +76,14 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 		_, exists := commands[arg]
 
 		if arg == "exit" || exists {
-			msg[i] = fmt.Sprintf("%s is a shell builtin\n", arg)
+			msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
 			continue
 		}
 
 		path, err := exec.LookPath(arg)
 
 		if err != nil {
-			msg[i] = fmt.Sprintf("%s: not found\n", arg)
+			msg[i] = fmt.Sprintf("%s: not found", arg)
 			continue
 		}
 

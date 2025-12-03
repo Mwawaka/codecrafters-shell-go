@@ -88,12 +88,12 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 
 func externalPrograms(file string, args []string) error {
 
-	bin, err := exec.LookPath(file)
+	_, err := exec.LookPath(file)
 
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(bin, args...)
+	cmd := exec.Command(file, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

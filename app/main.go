@@ -4,18 +4,21 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"slices"
+	"os/exec"
 	"strings"
 )
 
 type CommandHandler func(args []string) (string, error)
 
-var commands = map[string]CommandHandler{
-	"echo": echo,
-	"type": typo,
-}
-
 func main() {
+
+	var commands = map[string]CommandHandler{
+		"echo": echo,
+	}
+
+	commands["type"] = func(args []string) (string, error) {
+		return typeCmd(commands, args)
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -58,18 +61,26 @@ func echo(args []string) (string, error) {
 	return strings.Join(args, " "), nil
 }
 
-func typo(args []string) (string, error) {
-	types := []string{"echo", "exit", "type"}
+func typeCmd(commands map[string]CommandHandler, args []string) (string, error) {
+
 	msg := make([]string, len(args))
+
 	for i, arg := range args {
-		if !slices.Contains(types, arg) {
-			// msg[i] = fmt.Sprintf("%s: not found", arg)
-			fmt.Println(os.LookupEnv("PATH"))
+		_, exists := commands[arg]
+		
+		if arg == "exit" || exists {
+			msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
 			continue
 		}
-		msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
+		
+		path, err := exec.LookPath(arg)
+		
+		if err != nil {
+			msg[i] = fmt.Sprintf("%s: not found", arg)
+			continue
+		}
+
+		msg[i] = fmt.Sprintf("%s is %s", arg, path)
 	}
 	return strings.Join(msg, "\n"), nil
 }
-
-// TODO://consult with claude

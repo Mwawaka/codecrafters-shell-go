@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 )
 
@@ -20,6 +21,10 @@ func main() {
 	commands["type"] = func(args []string) (string, error) {
 		return typeCmd(commands, args)
 	}
+	commands["cd"] = func(args []string) (string, error) {
+		// TODO:// is this valid
+		return "", cd(args)
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -32,7 +37,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		parts := strings.Split(command[:len(command)-1], " ")
+		parts := strings.Fields(command[:len(command)-1])
 		cmdName := parts[0]
 
 		if cmdName == "exit" {
@@ -42,7 +47,7 @@ func main() {
 		if handler, exists := commands[cmdName]; exists {
 			out, err := handler(parts[1:])
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "error executing the command:", err)
+				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
 			fmt.Println(out)
@@ -88,6 +93,7 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 }
 
 func externalPrograms(file string, args []string) error {
+	// TODO: support for interactive programs
 	if _, err := exec.LookPath(file); err != nil {
 		return err
 	}
@@ -103,11 +109,43 @@ func externalPrograms(file string, args []string) error {
 }
 
 func pwd(args []string) (string, error) {
+	// TODO: do I need the args?
 	path, err := os.Getwd()
 
 	if err != nil {
 		return "", err
 	}
-	
+
 	return path, nil
 }
+
+func cd(args []string) error {
+
+	if len(args) > 1 {
+		return fmt.Errorf("cd: too many arguments")
+	}
+
+	if len(args) == 0 || args[0] == "~" {
+		return chDirToHome()
+	}
+
+	if err := os.Chdir(args[0]); err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", args[0])
+
+	}
+	return nil
+}
+
+func chDirToHome() error {
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+	return os.Chdir(u.HomeDir)
+}
+
+
+// TODO: unique error for 2 args
+// if len(args) == 2 {
+// 	return fmt.Errorf("cd: %s: string not in pwd", args[1])
+// }

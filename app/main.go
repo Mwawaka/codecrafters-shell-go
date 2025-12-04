@@ -71,16 +71,22 @@ func main() {
 func tokenizer(command string) []string {
 	currentToken := ""
 	tokens := []string{}
-	inQuote := false
+	inSingleQuote := false
+	inDoubleQuote := false
 
 	for _, r := range command {
 
-		if r == '\'' {
-			inQuote = !inQuote
+		if r == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
 			continue
 		}
 
-		if r == ' ' && !inQuote {
+		if r == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			continue
+		}
+		
+		if r == ' ' && !inSingleQuote && !inDoubleQuote{
 			if currentToken != "" {
 				tokens = append(tokens, currentToken)
 			}

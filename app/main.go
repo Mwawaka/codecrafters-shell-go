@@ -33,7 +33,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		parts := strings.Fields(command[:len(command)-1])
+		parts := tokenizer(command[:len(command)-1])
 		cmdName := parts[0]
 
 		if cmdName == "exit" {
@@ -41,7 +41,7 @@ func main() {
 		}
 
 		if cmdName == "cd" {
-			if err := cd(parts[1:]); err != nil {
+			if err := cd(strings.Fields(command[:len(command)-1])[1:]); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
 			continue
@@ -51,11 +51,6 @@ func main() {
 			out, err := handler(parts[1:])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
-				continue
-			}
-			if out == "" {
-				// TODO: Ensures turbo tests pass but not required for the shell
-				fmt.Print(out)
 				continue
 			}
 			fmt.Println(out)
@@ -68,17 +63,42 @@ func main() {
 	}
 }
 
+func tokenizer(command string) []string {
+	fmt.Println("tokenizer: ", command)
+	currentToken := ""
+	tokens := []string{}
+	inQuote := false
+
+	for _, r := range command {
+		if r == '\'' {
+			inQuote = !inQuote
+			continue
+		} else if r == ' ' && !inQuote {
+			tokens = append(tokens, currentToken)
+			currentToken = ""
+			continue
+		} else {
+			currentToken += string(r)
+		}
+
+	}
+
+	tokens = append(tokens, currentToken)
+	fmt.Println("Token Length: ", len(tokens))
+	return tokens
+}
+
 func exit() {
 	os.Exit(0)
 }
 
 func echo(args []string) (string, error) {
-	fmt.Println("args: ", args)
-	fmt.Println("len: ", len(args))
+	// fmt.Println("args: ", args)
+	// fmt.Println("len: ", len(args))
 	newArgs := []string{}
 	for _, arg := range args {
-		fmt.Println("arg: ", arg)
-		fmt.Println("len: ", len(arg))
+		// fmt.Println("arg: ", arg)
+		// fmt.Println("len: ", len(arg))
 		if strings.Contains(arg, `'`) {
 			quoteInx := strings.Index(arg, `'`)
 			newArgs = append(newArgs, arg[quoteInx+1:len(arg)-1])
@@ -96,7 +116,7 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 	for i, arg := range args {
 		_, exists := commands[arg]
 
-		if arg == "exit" || exists {
+		if arg == "exit" || arg == "cd" || exists {
 			msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
 			continue
 		}
@@ -130,7 +150,6 @@ func externalPrograms(file string, args []string) error {
 }
 
 func pwd(args []string) (string, error) {
-	// TODO: do I need the args?
 	path, err := os.Getwd()
 
 	if err != nil {

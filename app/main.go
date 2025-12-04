@@ -200,4 +200,4 @@ func cleanArgs(args []string) []string {
 // 	return fmt.Errorf("cd: %s: string not in pwd", args[1])
 // }
 
-// TODO: Most commands depend on strings.Fields() to handle multiple spaces
+// TODO: Most commands depend on strings.Fields() to handle multiple spaces // sol: cleanArgs

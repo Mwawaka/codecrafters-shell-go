@@ -74,21 +74,23 @@ func tokenizer(command string) []string {
 	inQuote := false
 
 	for _, r := range command {
+
 		if r == '\'' {
 			inQuote = !inQuote
 			continue
-		} else if r == ' ' && !inQuote {
-			tokens = append(tokens, currentToken)
-			currentToken = ""
-			continue
-		} else {
-			currentToken += string(r)
 		}
 
-	}
+		if r == ' ' && !inQuote {
+			if currentToken != "" {
+				tokens = append(tokens, currentToken)
+			}
+			currentToken = ""
+			continue
+		}
 
+		currentToken += string(r)
+	}
 	tokens = append(tokens, currentToken)
-	// fmt.Println("Token Length: ", len(tokens))
 	return tokens
 }
 
@@ -182,7 +184,7 @@ func chDirToHomeV2() error {
 }
 
 func cleanArgs(args []string) []string {
-	// TODO: removes extra white spaces that prefix 
+	// TODO: removes extra white spaces that prefix or suffix the args
 	newArgs := make([]string, 0, len(args))
 
 	for _, arg := range args {

@@ -85,8 +85,10 @@ func tokenizer(command string) []string {
 			inDoubleQuote = !inDoubleQuote
 			continue
 		}
-		
-		if r == ' ' && !inSingleQuote && !inDoubleQuote{
+		if r == '\\' {
+			continue
+		}
+		if r == ' ' && !inSingleQuote && !inDoubleQuote {
 			if currentToken != "" {
 				tokens = append(tokens, currentToken)
 			}

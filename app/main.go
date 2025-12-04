@@ -73,6 +73,7 @@ func tokenizer(command string) []string {
 	tokens := []string{}
 	inSingleQuote := false
 	inDoubleQuote := false
+	inBackSlash := false
 
 	for _, r := range command {
 
@@ -86,9 +87,10 @@ func tokenizer(command string) []string {
 			continue
 		}
 		if r == '\\' {
+			inBackSlash = !inBackSlash
 			continue
 		}
-		if r == ' ' && !inSingleQuote && !inDoubleQuote {
+		if r == ' ' && !inSingleQuote && !inDoubleQuote && !inBackSlash {
 			if currentToken != "" {
 				tokens = append(tokens, currentToken)
 			}

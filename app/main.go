@@ -42,7 +42,9 @@ func main() {
 		}
 
 		if cmdName == "cd" {
-			if err := cd(strings.Fields(command[:len(command)-1])[1:]); err != nil {
+			// strings.Fields()
+			if err := cd(parts[1:]); err != nil {
+
 				fmt.Fprintln(os.Stderr, err)
 			}
 			continue
@@ -69,38 +71,48 @@ func main() {
 }
 
 func tokenizer(command string) []string {
-	currentToken := ""
+	var builder strings.Builder
 	tokens := []string{}
+
 	inSingleQuote := false
 	inDoubleQuote := false
 	inBackSlash := false
 
 	for _, r := range command {
+		if inBackSlash {
+			builder.WriteRune(r)
+			inBackSlash = false
+			continue
+		}
 
-		if r == '\'' && !inDoubleQuote {
+		if r == '\'' && !inDoubleQuote && !inBackSlash {
 			inSingleQuote = !inSingleQuote
 			continue
 		}
 
-		if r == '"' && !inSingleQuote {
+		if r == '"' && !inSingleQuote && !inBackSlash {
 			inDoubleQuote = !inDoubleQuote
 			continue
 		}
-		if r == '\\' {
-			inBackSlash = !inBackSlash
-			continue
-		}
-		if r == ' ' && !inSingleQuote && !inDoubleQuote && !inBackSlash {
-			if currentToken != "" {
-				tokens = append(tokens, currentToken)
-			}
-			currentToken = ""
+
+		if r == '\\' && !inSingleQuote && !inDoubleQuote {
+			inBackSlash = true
 			continue
 		}
 
-		currentToken += string(r)
+		if r == ' ' && !inSingleQuote && !inDoubleQuote && !inBackSlash {
+
+			if builder.Len() > 0 {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
+
+			continue
+		}
+
+		builder.WriteRune(r)
 	}
-	tokens = append(tokens, currentToken)
+	tokens = append(tokens, builder.String())
 	return tokens
 }
 

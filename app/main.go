@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -58,13 +59,16 @@ func main() {
 		}
 
 		if err := externalPrograms(cmdName, parts[1:]); err != nil {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				continue
+			}
 			fmt.Printf("%s: command not found\n", cmdName)
 		}
 	}
 }
 
 func tokenizer(command string) []string {
-	fmt.Println("tokenizer: ", command)
 	currentToken := ""
 	tokens := []string{}
 	inQuote := false
@@ -84,7 +88,7 @@ func tokenizer(command string) []string {
 	}
 
 	tokens = append(tokens, currentToken)
-	fmt.Println("Token Length: ", len(tokens))
+	// fmt.Println("Token Length: ", len(tokens))
 	return tokens
 }
 
@@ -93,20 +97,7 @@ func exit() {
 }
 
 func echo(args []string) (string, error) {
-	// fmt.Println("args: ", args)
-	// fmt.Println("len: ", len(args))
-	newArgs := []string{}
-	for _, arg := range args {
-		// fmt.Println("arg: ", arg)
-		// fmt.Println("len: ", len(arg))
-		if strings.Contains(arg, `'`) {
-			quoteInx := strings.Index(arg, `'`)
-			newArgs = append(newArgs, arg[quoteInx+1:len(arg)-1])
-			continue
-		}
-		newArgs = append(newArgs, arg)
-	}
-	return strings.Join(newArgs, " "), nil
+	return strings.Join(args, " "), nil
 }
 
 func typeCmd(commands map[string]CommandHandler, args []string) (string, error) {
@@ -139,7 +130,7 @@ func externalPrograms(file string, args []string) error {
 		return err
 	}
 
-	cmd := exec.Command(file, args...)
+	cmd := exec.Command(file, cleanArgs(args)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -190,7 +181,21 @@ func chDirToHomeV2() error {
 	return os.Chdir(os.Getenv("HOME"))
 }
 
+func cleanArgs(args []string) []string {
+	// TODO: removes extra white spaces that prefix 
+	newArgs := make([]string, 0, len(args))
+
+	for _, arg := range args {
+		if arg != "" {
+			newArgs = append(newArgs, arg)
+		}
+	}
+	return newArgs
+}
+
 // TODO: unique error for 2 args
 // if len(args) == 2 {
 // 	return fmt.Errorf("cd: %s: string not in pwd", args[1])
 // }
+
+// TODO: Most commands depend on strings.Fields() to handle multiple spaces

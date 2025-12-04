@@ -21,10 +21,6 @@ func main() {
 	commands["type"] = func(args []string) (string, error) {
 		return typeCmd(commands, args)
 	}
-	commands["cd"] = func(args []string) (string, error) {
-		// TODO:// is this valid
-		return "", cd(args)
-	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -42,6 +38,13 @@ func main() {
 
 		if cmdName == "exit" {
 			exit()
+		}
+
+		if cmdName == "cd" {
+			if err := cd(parts[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+			continue
 		}
 
 		if handler, exists := commands[cmdName]; exists {
@@ -70,14 +73,20 @@ func exit() {
 }
 
 func echo(args []string) (string, error) {
+	fmt.Println("args: ", args)
+	fmt.Println("len: ", len(args))
+	newArgs := []string{}
 	for _, arg := range args {
+		fmt.Println("arg: ", arg)
+		fmt.Println("len: ", len(arg))
 		if strings.Contains(arg, `'`) {
-			// fmt.Println("contains a single quoty")
 			quoteInx := strings.Index(arg, `'`)
-			fmt.Println(quoteInx)
+			newArgs = append(newArgs, arg[quoteInx+1:len(arg)-1])
+			continue
 		}
+		newArgs = append(newArgs, arg)
 	}
-	return strings.Join(args, " "), nil
+	return strings.Join(newArgs, " "), nil
 }
 
 func typeCmd(commands map[string]CommandHandler, args []string) (string, error) {

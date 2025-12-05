@@ -138,8 +138,8 @@ func tokenizer(command string) []string {
 		}
 
 		if r == '>' && !inSingleQuote && !inDoubleQuote {
-			if len(tokens) > 0 && tokens[len(tokens)-1] == "1" {
-				tokens = tokens[:len(tokens)-1]
+			if builder.String() == "1" {
+				builder.Reset()
 			}
 
 			if builder.Len() > 0 {
@@ -167,6 +167,7 @@ func tokenizer(command string) []string {
 		tokens = append(tokens, builder.String())
 	}
 
+	// fmt.Println("tokens:", tokens)
 	return tokens
 }
 

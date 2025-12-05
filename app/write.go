@@ -13,15 +13,15 @@ func handleError(err error, msg string) {
 
 func writeFile(filename, msg string) {
 	byteSlice := []byte(msg)
-	cwd, err := pwd([]string{})
+	// cwd, err := pwd([]string{})
 
-	if err != nil {
-		handleError(err, err.Error())
-	}
+	// if err != nil {
+	// 	handleError(err, err.Error())
+	// }
 
-	path := filepath.Join(cwd, filename)
+	path := filepath.Join(filename)
 
-	if err = os.WriteFile(path, byteSlice, 0644); err != nil {
+	if err := os.WriteFile(path, byteSlice, 0644); err != nil {
 		handleError(err, "error writing to file")
 	}
 }

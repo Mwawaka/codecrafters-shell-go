@@ -49,7 +49,6 @@ func main() {
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-
 			if handler, exists := commands[cmdName]; exists {
 				out, err := handler(args)
 				if err != nil {
@@ -139,6 +138,10 @@ func tokenizer(command string) []string {
 		}
 
 		if r == '>' && !inSingleQuote && !inDoubleQuote {
+			if len(tokens) > 0 && tokens[len(tokens)-1] == "1" {
+				tokens = tokens[:len(tokens)-1]
+			}
+
 			if builder.Len() > 0 {
 				tokens = append(tokens, builder.String())
 				builder.Reset()

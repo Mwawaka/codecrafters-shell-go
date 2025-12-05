@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"strings"
 )
 
@@ -28,13 +27,17 @@ func main() {
 	for {
 		fmt.Print("$ ")
 		command, err := reader.ReadString('\n')
-
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
 		}
 
 		parts := tokenizer(command[:len(command)-1])
+
+		if len(parts) == 0 || parts[0] == "" {
+			continue
+		}
+
 		cmdName := parts[0]
 
 		if cmdName == "exit" {
@@ -42,7 +45,6 @@ func main() {
 		}
 
 		if cmdName == "cd" {
-			// strings.Fields()
 			if err := cd(parts[1:]); err != nil {
 
 				fmt.Fprintln(os.Stderr, err)
@@ -80,28 +82,31 @@ func tokenizer(command string) []string {
 
 	for _, r := range command {
 		if inBackSlash {
+			if inDoubleQuote && !isEscapableInDoubleQuote(r) {
+				builder.WriteRune('\\')
+			}
+
 			builder.WriteRune(r)
 			inBackSlash = false
 			continue
 		}
 
-		if r == '\'' && !inDoubleQuote && !inBackSlash {
+		if r == '\'' && !inDoubleQuote {
 			inSingleQuote = !inSingleQuote
 			continue
 		}
 
-		if r == '"' && !inSingleQuote && !inBackSlash {
+		if r == '"' && !inSingleQuote  {
 			inDoubleQuote = !inDoubleQuote
 			continue
 		}
-		
 
-		if r == '\\' && !inSingleQuote /*&& !inDoubleQuote*/ {
+		if r == '\\' && !inSingleQuote {
 			inBackSlash = true
 			continue
 		}
 
-		if r == ' ' && !inSingleQuote && !inDoubleQuote && !inBackSlash {
+		if r == ' ' && !inSingleQuote && !inDoubleQuote  {
 
 			if builder.Len() > 0 {
 				tokens = append(tokens, builder.String())
@@ -113,10 +118,17 @@ func tokenizer(command string) []string {
 
 		builder.WriteRune(r)
 	}
-	tokens = append(tokens, builder.String())
+
+	if builder.Len() > 0 {
+		tokens = append(tokens, builder.String())
+	}
+
 	return tokens
 }
 
+func isEscapableInDoubleQuote(r rune) bool {
+	return r == '"' || r == '\\' || r == '$' || r == '`' || r == '\n'
+}
 func exit() {
 	os.Exit(0)
 }
@@ -155,7 +167,7 @@ func externalPrograms(file string, args []string) error {
 		return err
 	}
 
-	cmd := exec.Command(file, cleanArgs(args)...)
+	cmd := exec.Command(file, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -182,7 +194,7 @@ func cd(args []string) error {
 	}
 
 	if len(args) == 0 || args[0] == "~" {
-		return chDirToHomeV2()
+		return chDirToHome()
 	}
 
 	if err := os.Chdir(args[0]); err != nil {
@@ -192,35 +204,6 @@ func cd(args []string) error {
 	return nil
 }
 
-func ChDirToHome() error {
-	// TODO: recommended, portable
-	u, err := user.Current()
-	if err != nil {
-		return err
-	}
-	return os.Chdir(u.HomeDir)
-}
-
-func chDirToHomeV2() error {
-	// TODO: ensure turbo tests pass
+func chDirToHome() error {
 	return os.Chdir(os.Getenv("HOME"))
 }
-
-func cleanArgs(args []string) []string {
-	// TODO: removes extra white spaces that prefix or suffix the args
-	newArgs := make([]string, 0, len(args))
-
-	for _, arg := range args {
-		if arg != "" {
-			newArgs = append(newArgs, arg)
-		}
-	}
-	return newArgs
-}
-
-// TODO: unique error for 2 args
-// if len(args) == 2 {
-// 	return fmt.Errorf("cd: %s: string not in pwd", args[1])
-// }
-
-// TODO: Most commands depend on strings.Fields() to handle multiple spaces // sol: cleanArgs

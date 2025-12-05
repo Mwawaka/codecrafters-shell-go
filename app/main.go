@@ -230,6 +230,7 @@ func externalProgramsBuffer(file string, args []string) (string, error) {
 
 	cmd := exec.Command(file, args...)
 	cmd.Stdout = &out
+	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
 		return "", err

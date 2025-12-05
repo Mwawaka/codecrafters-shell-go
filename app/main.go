@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 )
 
@@ -33,7 +35,7 @@ func main() {
 		}
 
 		parts := tokenizer(command[:len(command)-1])
-
+		redirectIndex := slices.Index(parts, ">")
 		if len(parts) == 0 || parts[0] == "" {
 			continue
 		}
@@ -42,6 +44,35 @@ func main() {
 
 		if cmdName == "exit" {
 			exit()
+		}
+
+		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
+			args := parts[1:redirectIndex]
+			filename := parts[redirectIndex+1]
+
+			if handler, exists := commands[cmdName]; exists {
+				out, err := handler(args)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+
+				} else {
+
+					writeFile(filename, out+"\n")
+				}
+				continue
+			}
+			out, err := externalProgramsBuffer(cmdName, args)
+
+			if err != nil {
+				var exitErr *exec.ExitError
+				if errors.As(err, &exitErr) {
+					continue
+				}
+				fmt.Printf("%s: command not found\n", cmdName)
+				continue
+			}
+			writeFile(filename, out)
+			continue
 		}
 
 		if cmdName == "cd" {
@@ -73,6 +104,7 @@ func main() {
 }
 
 func tokenizer(command string) []string {
+	// TODO: handling backticks
 	var builder strings.Builder
 	tokens := []string{}
 
@@ -96,7 +128,7 @@ func tokenizer(command string) []string {
 			continue
 		}
 
-		if r == '"' && !inSingleQuote  {
+		if r == '"' && !inSingleQuote {
 			inDoubleQuote = !inDoubleQuote
 			continue
 		}
@@ -106,8 +138,17 @@ func tokenizer(command string) []string {
 			continue
 		}
 
-		if r == ' ' && !inSingleQuote && !inDoubleQuote  {
+		if r == '>' && !inSingleQuote && !inDoubleQuote {
+			if builder.Len() > 0 {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
 
+			tokens = append(tokens, ">")
+			continue
+		}
+
+		if r == ' ' && !inSingleQuote && !inDoubleQuote {
 			if builder.Len() > 0 {
 				tokens = append(tokens, builder.String())
 				builder.Reset()
@@ -175,6 +216,22 @@ func externalPrograms(file string, args []string) error {
 		return err
 	}
 	return nil
+}
+
+func externalProgramsBuffer(file string, args []string) (string, error) {
+	var out bytes.Buffer
+	if _, err := exec.LookPath(file); err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command(file, args...)
+	cmd.Stdout = &out
+
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return out.String(), nil
+
 }
 
 func pwd(args []string) (string, error) {

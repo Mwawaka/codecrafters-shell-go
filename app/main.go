@@ -94,6 +94,7 @@ func tokenizer(command string) []string {
 			inDoubleQuote = !inDoubleQuote
 			continue
 		}
+		
 
 		if r == '\\' && !inSingleQuote /*&& !inDoubleQuote*/ {
 			inBackSlash = true

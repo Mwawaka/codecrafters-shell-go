@@ -66,6 +66,7 @@ func main() {
 				var exitErr *exec.ExitError
 
 				if errors.As(err, &exitErr) {
+					fmt.Print()
 				} else if errors.Is(err, exec.ErrNotFound) {
 					fmt.Fprintf(os.Stderr, "%s: command not found\n", cmdName)
 				} else {
@@ -229,14 +230,10 @@ func runExternal(cmdName string, args []string, writer io.Writer) error {
 
 	if errIndex != -1 && errIndex < len(args) {
 		cmd = exec.Command(cmdName, args[:errIndex]...)
-	} else {
-		cmd = exec.Command(cmdName, args...)
-	}
-
-	if args[len(args)-1] == "2" && len(args) > 0 {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = writer
 	} else {
+		cmd = exec.Command(cmdName, args...)
 		cmd.Stdout = writer
 		cmd.Stderr = os.Stderr
 	}

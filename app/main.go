@@ -37,6 +37,7 @@ func main() {
 
 		parts := tokenizer(command[:len(command)-1])
 		redirectIndex := slices.Index(parts, ">")
+
 		if len(parts) == 0 || parts[0] == "" {
 			continue
 		}
@@ -56,19 +57,20 @@ func main() {
 		}
 
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
+			var err error
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-			handleError := handleRedirect(cmdName, filename, args, commands)
+			err = handleRedirect(cmdName, filename, args, commands)
 
-			if handleError != nil {
+			if err != nil {
 				var exitErr *exec.ExitError
 
-				if errors.As(handleError, &exitErr) {
+				if errors.As(err, &exitErr) {
 					fmt.Print()
-				} else if errors.Is(handleError, exec.ErrNotFound) {
+				} else if errors.Is(err, exec.ErrNotFound) {
 					fmt.Fprintf(os.Stderr, "%s: command not found\n", cmdName)
 				} else {
-					fmt.Fprintln(os.Stderr, handleError)
+					fmt.Fprintln(os.Stderr, err)
 				}
 			}
 			continue
@@ -116,10 +118,8 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 }
 
 func tokenizer(command string) []string {
-	// TODO: handling backticks
 	var builder strings.Builder
 	tokens := []string{}
-
 	inSingleQuote := false
 	inDoubleQuote := false
 	inBackSlash := false
@@ -181,6 +181,7 @@ func tokenizer(command string) []string {
 	}
 
 	// fmt.Println("tokens:", tokens)
+	// fmt.Println("token length", len(tokens))
 	return tokens
 }
 
@@ -220,13 +221,29 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 }
 
 func runExternal(cmdName string, args []string, writer io.Writer) error {
+	var cmd *exec.Cmd
+	errIndex := slices.Index(args, "2")
+
 	if _, err := exec.LookPath(cmdName); err != nil {
 		return err
 	}
 
-	cmd := exec.Command(cmdName, args...)
-	cmd.Stdout = writer
-	cmd.Stderr = os.Stderr
+	if errIndex != -1 && errIndex < len(args) {
+		cmd = exec.Command(cmdName, args[:errIndex]...)
+	} else {
+		cmd = exec.Command(cmdName, args...)
+	}
+
+	
+
+	if len(args) > 0 && args[len(args)-1] == "2" {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = writer
+	} else {
+		cmd.Stdout = writer
+		cmd.Stderr = os.Stderr
+	}
+
 	return cmd.Run()
 }
 

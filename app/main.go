@@ -96,7 +96,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			fmt.Println(out)
+			fmt.Print(out) //use ln in real shell
 			continue
 		}
 

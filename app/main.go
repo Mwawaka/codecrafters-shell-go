@@ -59,7 +59,7 @@ func main() {
 			if err := cd(parts[1:]); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-
+			
 			continue
 		}
 
@@ -96,7 +96,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			fmt.Print(out) //use ln in real shell
+			fmt.Println(out)
 			continue
 		}
 

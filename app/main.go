@@ -12,6 +12,13 @@ import (
 	"strings"
 )
 
+const (
+	// fdStdin  int = 0
+	fdStdout int = 1
+	fdStderr int = 2
+	none     int = 3
+)
+
 type CommandHandler func(args []string) (string, error)
 
 func main() {
@@ -60,7 +67,18 @@ func main() {
 			var err error
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-			err = handleRedirect(cmdName, filename, args, commands)
+			fileDescriptor := fdStdout
+
+			if redirectIndex > 0 {
+				if parts[redirectIndex-1] == "2" {
+					fileDescriptor = fdStderr
+				} else {
+					fileDescriptor = none
+				}
+				args = parts[1 : redirectIndex-1]
+			}
+
+			err = handleRedirect(cmdName, filename, args, commands, fileDescriptor)
 
 			if err != nil {
 				var exitErr *exec.ExitError
@@ -86,7 +104,7 @@ func main() {
 			continue
 		}
 
-		if err := runExternal(cmdName, parts[1:], os.Stdout); err != nil {
+		if err := runExternal(cmdName, parts[1:], os.Stdout, none); err != nil {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
 				continue
@@ -96,7 +114,7 @@ func main() {
 	}
 }
 
-func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler) error {
+func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler, fileDescriptor int) error {
 	var buffer bytes.Buffer
 
 	if handler, exists := commands[cmdName]; exists {
@@ -106,10 +124,16 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 			return err
 		}
 
-		return writeToFile(filename, []byte(out+"\n"))
+		if fileDescriptor == fdStdout {
+			return writeToFile(filename, []byte(out+"\n"))
+		}
+
+		writeToFile(filename, []byte{})
+		fmt.Println(out)
+		return nil
 	}
 
-	if err := runExternal(cmdName, args, &buffer); err != nil {
+	if err := runExternal(cmdName, args, &buffer, fileDescriptor); err != nil {
 		writeToFile(filename, buffer.Bytes())
 		return err
 	}
@@ -220,27 +244,23 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 	return strings.Join(msg, "\n"), nil
 }
 
-func runExternal(cmdName string, args []string, writer io.Writer) error {
-	var cmd *exec.Cmd
-	errIndex := slices.Index(args, "2")
+func runExternal(cmdName string, args []string, writer io.Writer, fileDescriptor int) error {
 
 	if _, err := exec.LookPath(cmdName); err != nil {
 		return err
 	}
 
-	if errIndex != -1 && errIndex < len(args) {
-		cmd = exec.Command(cmdName, args[:errIndex]...)
-	} else {
-		cmd = exec.Command(cmdName, args...)
-	}
+	cmd := exec.Command(cmdName, args...)
 
-	
-
-	if len(args) > 0 && args[len(args)-1] == "2" {
+	switch fileDescriptor {
+	case fdStdout:
+		cmd.Stdout = writer
+		cmd.Stderr = os.Stderr
+	case fdStderr:
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = writer
-	} else {
-		cmd.Stdout = writer
+	default:
+		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
 

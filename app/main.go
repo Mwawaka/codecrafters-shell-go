@@ -234,8 +234,6 @@ func runExternal(cmdName string, args []string, writer io.Writer) error {
 		cmd = exec.Command(cmdName, args...)
 	}
 
-	
-
 	if len(args) > 0 && args[len(args)-1] == "2" {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = writer

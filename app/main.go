@@ -40,8 +40,9 @@ func main() {
 		
 		command, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error reading input:", err)
-			os.Exit(1)
+			// fmt.Fprintln(os.Stderr, "error reading input:", err)
+			// os.Exit(1)
+			os.Exit(0)
 		}
 
 		parts := tokenizer(command[:len(command)-1])

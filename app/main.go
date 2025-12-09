@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	// fdStdin  int = 0
 	fdStdout int = 1
 	fdStderr int = 2
 	none     int = 3
@@ -36,6 +35,7 @@ func main() {
 
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
+		os.Stdout.Sync()
 		command, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
@@ -59,12 +59,11 @@ func main() {
 			if err := cd(parts[1:]); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-			
+
 			continue
 		}
 
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
-			var err error
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
 			fileDescriptor := fdStdout
@@ -74,7 +73,7 @@ func main() {
 				args = parts[1 : redirectIndex-1]
 			}
 
-			err = handleRedirect(cmdName, filename, args, commands, fileDescriptor)
+			err := handleRedirect(cmdName, filename, args, commands, fileDescriptor)
 
 			if err != nil {
 				var exitErr *exec.ExitError

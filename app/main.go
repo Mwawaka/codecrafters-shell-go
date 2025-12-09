@@ -35,7 +35,7 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Print("$ ")
+		fmt.Fprint(os.Stdout, "$ ")
 		command, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
@@ -119,7 +119,7 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 		if err != nil {
 			return err
 		}
-		
+
 		if fileDescriptor == fdStdout {
 			return writeToFile(filename, []byte(out+"\n"))
 		}

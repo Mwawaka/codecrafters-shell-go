@@ -56,36 +56,20 @@ func main() {
 		}
 
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
-			var buffer bytes.Buffer
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-			if handler, exists := commands[cmdName]; exists {
-				out, err := handler(args)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+			handleError := handleRedirect(cmdName, filename, args, commands)
 
-				} else {
-
-					if err = writeToFile(filename, []byte(out+"\n")); err != nil {
-						fmt.Fprintln(os.Stderr, err)
-					}
-				}
-				continue
-			}
-
-			if err := runExternal(cmdName, args, &buffer); err != nil {
+			if handleError != nil {
 				var exitErr *exec.ExitError
 
-				if errors.As(err, &exitErr) {
-					continue
+				if errors.As(handleError, &exitErr) {
+					fmt.Print()
+				} else if errors.Is(handleError, exec.ErrNotFound) {
+					fmt.Fprintf(os.Stderr, "%s: command not found\n", cmdName)
+				} else {
+					fmt.Fprintln(os.Stderr, handleError)
 				}
-
-				fmt.Printf("%s: command not found\n", cmdName)
-				continue
-			}
-
-			if err = writeToFile(filename, buffer.Bytes()); err != nil {
-				fmt.Fprintln(os.Stderr, err)
 			}
 			continue
 		}
@@ -108,6 +92,27 @@ func main() {
 			fmt.Printf("%s: command not found\n", cmdName)
 		}
 	}
+}
+
+func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler) error {
+	var buffer bytes.Buffer
+
+	if handler, exists := commands[cmdName]; exists {
+		out, err := handler(args)
+
+		if err != nil {
+			return err
+		}
+
+		return writeToFile(filename, []byte(out+"\n"))
+	}
+
+	if err := runExternal(cmdName, args, &buffer); err != nil {
+		writeToFile(filename, buffer.Bytes())
+		return err
+	}
+
+	return writeToFile(filename, buffer.Bytes())
 }
 
 func tokenizer(command string) []string {
@@ -214,12 +219,12 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 	return strings.Join(msg, "\n"), nil
 }
 
-func runExternal(file string, args []string, writer io.Writer) error {
-	if _, err := exec.LookPath(file); err != nil {
+func runExternal(cmdName string, args []string, writer io.Writer) error {
+	if _, err := exec.LookPath(cmdName); err != nil {
 		return err
 	}
 
-	cmd := exec.Command(file, args...)
+	cmd := exec.Command(cmdName, args...)
 	cmd.Stdout = writer
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

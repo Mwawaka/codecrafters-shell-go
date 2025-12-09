@@ -119,7 +119,7 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 		if err != nil {
 			return err
 		}
-		fmt.Println("FD:", fileDescriptor)
+		
 		if fileDescriptor == fdStdout {
 			return writeToFile(filename, []byte(out+"\n"))
 		}

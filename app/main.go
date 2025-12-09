@@ -37,7 +37,7 @@ func main() {
 		// fmt.Fprint(os.Stdout, "$ ")
 		// os.Stdout.Sync()
 		os.Stdout.Write([]byte("$ "))
-		
+
 		command, err := reader.ReadString('\n')
 		if err != nil {
 			// fmt.Fprintln(os.Stderr, "error reading input:", err)
@@ -276,22 +276,27 @@ func pwd(args []string) (string, error) {
 }
 
 func cd(args []string) error {
-
+	tgt := "."
 	if len(args) > 1 {
 		return fmt.Errorf("cd: too many arguments")
 	}
 
-	if len(args) == 0 || args[0] == "~" {
-		return chDirToHome()
+	if len(args) == 0 || args[0] == "~" || args[0] == "" {
+		tgt = os.Getenv("HOME")
+		if tgt == "" {
+			tgt = "/"
+		}
+	} else {
+		tgt = args[0]
 	}
 
-	if err := os.Chdir(args[0]); err != nil {
+	if err := os.Chdir(tgt); err != nil {
 		return fmt.Errorf("cd: %s: No such file or directory", args[0])
 
 	}
 	return nil
 }
 
-func chDirToHome() error {
-	return os.Chdir(os.Getenv("HOME"))
-}
+// func chDirToHome() error {
+// 	return os.Chdir(os.Getenv("HOME"))
+// }

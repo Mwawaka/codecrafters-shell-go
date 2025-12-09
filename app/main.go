@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -47,8 +48,10 @@ func main() {
 		}
 
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
+			var buffer bytes.Buffer
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
+
 			if handler, exists := commands[cmdName]; exists {
 				out, err := handler(args)
 				if err != nil {
@@ -56,21 +59,31 @@ func main() {
 
 				} else {
 
-					writeFile(filename, out+"\n")
+					if err = writeToFile(filename, []byte(out+"\n")); err != nil {
+						fmt.Fprintln(os.Stderr, err)
+					}
 				}
 				continue
 			}
-			out, err := externalProgramsBuffer(cmdName, args)
 
-			if err != nil {
+			if err := runExternal(cmdName, args, &buffer); err != nil {
 				var exitErr *exec.ExitError
+
 				if errors.As(err, &exitErr) {
+
+					if err = writeToFile(filename, buffer.Bytes()); err != nil {
+						fmt.Fprintln(os.Stderr, err)
+					}
 					continue
 				}
+
 				fmt.Printf("%s: command not found\n", cmdName)
 				continue
 			}
-			writeFile(filename, out)
+
+			if err = writeToFile(filename, buffer.Bytes()); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 			continue
 		}
 
@@ -92,7 +105,7 @@ func main() {
 			continue
 		}
 
-		if err := externalPrograms(cmdName, parts[1:]); err != nil {
+		if err := runExternal(cmdName, parts[1:], os.Stdout); err != nil {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
 				continue
@@ -206,37 +219,15 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 	return strings.Join(msg, "\n"), nil
 }
 
-func externalPrograms(file string, args []string) error {
-	// TODO: support for interactive programs
+func runExternal(file string, args []string, writer io.Writer) error {
 	if _, err := exec.LookPath(file); err != nil {
 		return err
 	}
 
 	cmd := exec.Command(file, args...)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = writer
 	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func externalProgramsBuffer(file string, args []string) (string, error) {
-	var out bytes.Buffer
-	if _, err := exec.LookPath(file); err != nil {
-		return "", err
-	}
-
-	cmd := exec.Command(file, args...)
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-	return out.String(), nil
-
+	return cmd.Run()
 }
 
 func pwd(args []string) (string, error) {

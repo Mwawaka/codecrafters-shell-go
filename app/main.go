@@ -47,11 +47,18 @@ func main() {
 			exit()
 		}
 
+		if cmdName == "cd" {
+			if err := cd(parts[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+
+			continue
+		}
+
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
 			var buffer bytes.Buffer
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-
 			if handler, exists := commands[cmdName]; exists {
 				out, err := handler(args)
 				if err != nil {
@@ -70,10 +77,6 @@ func main() {
 				var exitErr *exec.ExitError
 
 				if errors.As(err, &exitErr) {
-
-					if err = writeToFile(filename, buffer.Bytes()); err != nil {
-						fmt.Fprintln(os.Stderr, err)
-					}
 					continue
 				}
 
@@ -82,14 +85,6 @@ func main() {
 			}
 
 			if err = writeToFile(filename, buffer.Bytes()); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
-			continue
-		}
-
-		if cmdName == "cd" {
-			if err := cd(parts[1:]); err != nil {
-
 				fmt.Fprintln(os.Stderr, err)
 			}
 			continue

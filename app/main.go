@@ -36,11 +36,8 @@ func main() {
 	for {
 		// fmt.Fprint(os.Stdout, "$ ")
 		// os.Stdout.Sync()
-
-		if _,err:=os.Stdout.Write([]byte("$ "));err!=nil{
-			fmt.Fprintln(os.Stderr, "error reading input:", err)
-			os.Exit(1)
-		}
+		os.Stdout.Write([]byte("$ "))
+		
 		command, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)

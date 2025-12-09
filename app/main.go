@@ -69,12 +69,8 @@ func main() {
 			filename := parts[redirectIndex+1]
 			fileDescriptor := fdStdout
 
-			if redirectIndex > 0 {
-				if parts[redirectIndex-1] == "2" {
-					fileDescriptor = fdStderr
-				} else {
-					fileDescriptor = none
-				}
+			if redirectIndex > 0 && parts[redirectIndex-1] == "2" {
+				fileDescriptor = fdStderr
 				args = parts[1 : redirectIndex-1]
 			}
 
@@ -123,7 +119,7 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 		if err != nil {
 			return err
 		}
-
+		fmt.Println("FD:", fileDescriptor)
 		if fileDescriptor == fdStdout {
 			return writeToFile(filename, []byte(out+"\n"))
 		}

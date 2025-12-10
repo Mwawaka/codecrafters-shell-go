@@ -276,27 +276,32 @@ func pwd(args []string) (string, error) {
 }
 
 func cd(args []string) error {
-	tgt := "."
 	if len(args) > 1 {
 		return fmt.Errorf("cd: too many arguments")
 	}
 
-	if len(args) == 0 || args[0] == "~" || args[0] == "" {
-		tgt = os.Getenv("HOME")
-		if tgt == "" {
-			tgt = "/"
+	if len(args) > 0 {
+		if args[0] == "~" {
+			return chDirToHome()
+		} else {
+			err := os.Chdir(args[0])
+			if err != nil {
+				return fmt.Errorf("cd: %s: No such file or directory", args[0])
+			}
 		}
-	} else {
-		tgt = args[0]
 	}
 
-	if err := os.Chdir(tgt); err != nil {
-		return fmt.Errorf("cd: %s: No such file or directory", args[0])
-
+	if len(args) == 0 {
+		path, err := pwd([]string{})
+		if err != nil {
+			return err
+		}
+		return os.Chdir(path)
 	}
+
 	return nil
 }
 
-// func chDirToHome() error {
-// 	return os.Chdir(os.Getenv("HOME"))
-// }
+func chDirToHome() error {
+	return os.Chdir(os.Getenv("HOME"))
+}

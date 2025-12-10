@@ -4,6 +4,6 @@ import (
 	"os"
 )
 
-func writeToFile(filename string, data []byte) error {
+func writeToFile(filename string, data []byte, appendMode bool) error {
 	return os.WriteFile(filename, data, 0644)
 }

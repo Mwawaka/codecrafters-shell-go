@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"slices"
 	"strings"
 )
 
@@ -16,6 +15,12 @@ const (
 	fdStdout int = 1
 	fdStderr int = 2
 	none     int = 3
+)
+
+const (
+	TokenWord              = iota
+	TokenRedirectOut       // '>'
+	TokenRedirectOutAppend // '>>'
 )
 
 type CommandHandler func(args []string) (string, error)
@@ -45,7 +50,10 @@ func main() {
 		}
 
 		parts := tokenizer(command[:len(command)-1])
-		redirectIndex := slices.Index(parts, ">")
+		// redirectIndex := slices.Index(parts, ">")
+		redirectIndex := -1
+		redirectType := TokenWord
+		isAppend := false
 
 		if len(parts) == 0 || parts[0] == "" {
 			continue
@@ -65,6 +73,20 @@ func main() {
 			continue
 		}
 
+		for i, token := range parts {
+			tt := tokenType(token)
+			if tt == TokenRedirectOut || tt == TokenRedirectOutAppend {
+				redirectIndex = i
+				redirectType = tt
+				isAppend = (tt == TokenRedirectOutAppend)
+				break //TODO: remove in real-shell
+			} else if token == ">>" {
+				redirectIndex = i
+				isAppend = true
+				break
+			}
+		}
+		fmt.Println("redirect type:", redirectType)
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
@@ -75,7 +97,7 @@ func main() {
 				args = parts[1 : redirectIndex-1]
 			}
 
-			err := handleRedirect(cmdName, filename, args, commands, fileDescriptor)
+			err := handleRedirect(cmdName, filename, args, commands, fileDescriptor, isAppend)
 
 			if err != nil {
 				var exitErr *exec.ExitError
@@ -111,7 +133,18 @@ func main() {
 	}
 }
 
-func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler, fileDescriptor int) error {
+func tokenType(token string) int {
+	switch token {
+	case ">":
+		return TokenRedirectOut
+	case ">>":
+		return TokenRedirectOutAppend
+	default:
+		return TokenWord
+	}
+}
+
+func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler, fileDescriptor int, appendMode bool) error {
 	var buffer bytes.Buffer
 
 	if handler, exists := commands[cmdName]; exists {
@@ -122,20 +155,20 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 		}
 
 		if fileDescriptor == fdStdout {
-			return writeToFile(filename, []byte(out+"\n"))
+			return writeToFile(filename, []byte(out+"\n"), appendMode)
 		}
 
-		writeToFile(filename, []byte{})
+		writeToFile(filename, []byte{}, appendMode)
 		fmt.Println(out)
 		return nil
 	}
 
 	if err := runExternal(cmdName, args, &buffer, fileDescriptor); err != nil {
-		writeToFile(filename, buffer.Bytes())
+		writeToFile(filename, buffer.Bytes(), appendMode)
 		return err
 	}
 
-	return writeToFile(filename, buffer.Bytes())
+	return writeToFile(filename, buffer.Bytes(), appendMode)
 }
 
 func tokenizer(command string) []string {

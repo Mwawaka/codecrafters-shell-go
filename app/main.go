@@ -50,7 +50,6 @@ func main() {
 		}
 
 		parts := tokenizer(command[:len(command)-1])
-		// redirectIndex := slices.Index(parts, ">")
 		redirectIndex := -1
 		redirectType := TokenWord
 		isAppend := false

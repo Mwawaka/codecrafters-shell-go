@@ -39,21 +39,15 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Fprint(os.Stdout, "$ ")
-		os.Stdout.Sync()
-		// os.Stdout.Write([]byte("$ "))
-
+		fmt.Print("$ ")
 		command, err := reader.ReadString('\n')
+
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
 		}
 
 		parts := tokenizer(command[:len(command)-1])
-		redirectIndex := -1
-		redirectType := TokenWord
-		var _ = redirectType
-		isAppend := false
 
 		if len(parts) == 0 || parts[0] == "" {
 			continue
@@ -73,27 +67,30 @@ func main() {
 			continue
 		}
 
+		redirectIndex := -1
+		fileDescriptor := fdStdout
+		isAppend := false
+
 		for i, token := range parts {
 			tt := tokenType(token)
 			if tt == TokenRedirectOut || tt == TokenRedirectOutAppend {
 				redirectIndex = i
-				redirectType = tt
 				isAppend = (tt == TokenRedirectOutAppend)
-				break //TODO: remove in real-shell
-			} else if token == ">>" {
-				redirectIndex = i
-				isAppend = true
+				
+				if i > 0 && parts[i-1] == "2" {
+					fileDescriptor = fdStderr
+				}
+				
 				break
 			}
 		}
-		
+
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
-			fileDescriptor := fdStdout
 
-			if redirectIndex > 0 && parts[redirectIndex-1] == "2" {
-				fileDescriptor = fdStderr
+			if fileDescriptor == fdStderr {
+
 				args = parts[1 : redirectIndex-1]
 			}
 

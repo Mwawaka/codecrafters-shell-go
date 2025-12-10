@@ -34,15 +34,14 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		// fmt.Fprint(os.Stdout, "$ ")
-		// os.Stdout.Sync()
-		os.Stdout.Write([]byte("$ "))
+		fmt.Fprint(os.Stdout, "$ ")
+		os.Stdout.Sync()
+		// os.Stdout.Write([]byte("$ "))
 
 		command, err := reader.ReadString('\n')
 		if err != nil {
-			// fmt.Fprintln(os.Stderr, "error reading input:", err)
-			// os.Exit(1)
-			os.Exit(0)
+			fmt.Fprintln(os.Stderr, "error reading input:", err)
+			os.Exit(1)
 		}
 
 		parts := tokenizer(command[:len(command)-1])
@@ -140,13 +139,15 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 }
 
 func tokenizer(command string) []string {
+	runes := []rune(command)
 	var builder strings.Builder
 	tokens := []string{}
 	inSingleQuote := false
 	inDoubleQuote := false
 	inBackSlash := false
 
-	for _, r := range command {
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
 		if inBackSlash {
 			if inDoubleQuote && !isEscapableInDoubleQuote(r) {
 				builder.WriteRune('\\')
@@ -173,16 +174,27 @@ func tokenizer(command string) []string {
 		}
 
 		if r == '>' && !inSingleQuote && !inDoubleQuote {
-			if builder.String() == "1" {
-				builder.Reset()
-			}
+			nextRune, hasNext := peekNext(runes, i)
 
-			if builder.Len() > 0 {
-				tokens = append(tokens, builder.String())
-				builder.Reset()
-			}
+			if hasNext && nextRune == '>' {
+				if builder.Len() > 0 {
+					tokens = append(tokens, builder.String())
+					builder.Reset()
+				}
+				tokens = append(tokens, ">>")
+				i++
+			} else {
+				if builder.String() == "1" {
+					builder.Reset()
+				}
 
-			tokens = append(tokens, ">")
+				if builder.Len() > 0 {
+					tokens = append(tokens, builder.String())
+					builder.Reset()
+				}
+
+				tokens = append(tokens, ">")
+			}
 			continue
 		}
 
@@ -202,14 +214,23 @@ func tokenizer(command string) []string {
 		tokens = append(tokens, builder.String())
 	}
 
-	// fmt.Println("tokens:", tokens)
-	// fmt.Println("token length", len(tokens))
+	fmt.Println("tokens:", tokens)
+	fmt.Println("token length", len(tokens))
 	return tokens
+}
+
+func peekNext(runes []rune, i int) (rune, bool) {
+	nextIndx := i + 1
+	if nextIndx < len(runes) {
+		return runes[nextIndx], true
+	}
+	return 0, false
 }
 
 func isEscapableInDoubleQuote(r rune) bool {
 	return r == '"' || r == '\\' || r == '$' || r == '`' || r == '\n'
 }
+
 func exit() {
 	os.Exit(0)
 }
@@ -303,5 +324,9 @@ func cd(args []string) error {
 }
 
 func chDirToHome() error {
-	return os.Chdir(os.Getenv("HOME"))
+	home := os.Getenv("HOME")
+	if home == "" {
+		return fmt.Errorf("HOME is not set")
+	}
+	return os.Chdir(home)
 }

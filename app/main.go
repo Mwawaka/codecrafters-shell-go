@@ -214,8 +214,8 @@ func tokenizer(command string) []string {
 		tokens = append(tokens, builder.String())
 	}
 
-	fmt.Println("tokens:", tokens)
-	fmt.Println("token length", len(tokens))
+	// fmt.Println("tokens:", tokens)
+	// fmt.Println("token length", len(tokens))
 	return tokens
 }
 

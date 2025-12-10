@@ -52,6 +52,7 @@ func main() {
 		parts := tokenizer(command[:len(command)-1])
 		redirectIndex := -1
 		redirectType := TokenWord
+		var _ = redirectType
 		isAppend := false
 
 		if len(parts) == 0 || parts[0] == "" {
@@ -85,7 +86,7 @@ func main() {
 				break
 			}
 		}
-		fmt.Println("redirect type:", redirectType)
+		
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]

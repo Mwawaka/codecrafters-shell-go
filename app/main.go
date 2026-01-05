@@ -76,11 +76,11 @@ func main() {
 			if tt == TokenRedirectOut || tt == TokenRedirectOutAppend {
 				redirectIndex = i
 				isAppend = (tt == TokenRedirectOutAppend)
-				
+
 				if i > 0 && parts[i-1] == "2" {
 					fileDescriptor = fdStderr
 				}
-				
+
 				break
 			}
 		}
@@ -331,23 +331,12 @@ func cd(args []string) error {
 		return fmt.Errorf("cd: too many arguments")
 	}
 
-	if len(args) > 0 {
-		if args[0] == "~" {
-			return chDirToHome()
-		} else {
-			err := os.Chdir(args[0])
-			if err != nil {
-				return fmt.Errorf("cd: %s: No such file or directory", args[0])
-			}
-		}
+	if len(args) == 0 || args[0] == "~" {
+		return chDirToHome()
 	}
 
-	if len(args) == 0 {
-		path, err := pwd([]string{})
-		if err != nil {
-			return err
-		}
-		return os.Chdir(path)
+	if err := os.Chdir(args[0]); err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", args[0])
 	}
 
 	return nil

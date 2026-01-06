@@ -19,10 +19,11 @@ const (
 )
 
 const (
-	TokenWord              = iota
-	TokenRedirectOut       // '>'
-	TokenRedirectOutAppend // '>>'
-	
+	TokenWord                = iota
+	TokenRedirectOut         // '>'
+	TokenRedirectOutAppend   // '>>'
+	TokenRedirectError       //2>
+	TokenRedirectErrorAppend //>>2
 )
 
 type CommandHandler func(args []string) (string, error)
@@ -75,11 +76,11 @@ func main() {
 
 		for i, token := range parts {
 			tt := tokenType(token)
-			if tt == TokenRedirectOut || tt == TokenRedirectOutAppend {
+			if tt == TokenRedirectOutAppend || tt == TokenRedirectErrorAppend {
 				redirectIndex = i
-				isAppend = (tt == TokenRedirectOutAppend)
+				isAppend = !isAppend
 
-				if i > 0 && parts[i-1] == "2>" {
+				if i > 0 && parts[i-1] == "2>>" {
 					fileDescriptor = fdStderr
 				}
 
@@ -91,10 +92,11 @@ func main() {
 			args := parts[1:redirectIndex]
 			filename := parts[redirectIndex+1]
 
-			if fileDescriptor == fdStderr {
+			// if fileDescriptor == fdStderr {
+			// 	args = parts[1 : redirectIndex-1]
+			
 
-				args = parts[1 : redirectIndex-1]
-			}
+			// }
 
 			err := handleRedirect(cmdName, filename, args, commands, fileDescriptor, isAppend)
 
@@ -134,10 +136,14 @@ func main() {
 
 func tokenType(token string) int {
 	switch token {
-	case ">" ,"1>" :
+	case ">", "1>":
 		return TokenRedirectOut
-	case ">>","1>>":
+	case ">>", "1>>":
 		return TokenRedirectOutAppend
+	case "2>":
+		return TokenRedirectError
+	case "2>>":
+		return TokenRedirectErrorAppend
 	default:
 		return TokenWord
 	}
@@ -241,8 +247,9 @@ func parse(command string) []string {
 
 		builder.WriteRune(r)
 	}
-	flush(&builder, &tokens)
 
+	flush(&builder, &tokens)
+	fmt.Println("Tokens: ", tokens)
 	return tokens
 }
 
@@ -298,11 +305,6 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 }
 
 func runExternal(cmdName string, args []string, writer io.Writer, fileDescriptor int) error {
-
-	if _, err := exec.LookPath(cmdName); err != nil {
-		return err
-	}
-
 	cmd := exec.Command(cmdName, args...)
 
 	switch fileDescriptor {

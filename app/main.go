@@ -22,6 +22,7 @@ const (
 	TokenWord              = iota
 	TokenRedirectOut       // '>'
 	TokenRedirectOutAppend // '>>'
+	
 )
 
 type CommandHandler func(args []string) (string, error)

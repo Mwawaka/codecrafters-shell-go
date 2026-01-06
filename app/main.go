@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -47,7 +48,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		parts := tokenizer(command[:len(command)-1])
+		parts := parse(command[:len(command)-1])
 
 		if len(parts) == 0 || parts[0] == "" {
 			continue
@@ -168,7 +169,7 @@ func handleRedirect(cmdName, filename string, args []string, commands map[string
 	return writeToFile(filename, buffer.Bytes(), appendMode)
 }
 
-func tokenizer(command string) []string {
+func parse(command string) []string {
 	runes := []rune(command)
 	var builder strings.Builder
 	tokens := []string{}
@@ -205,47 +206,42 @@ func tokenizer(command string) []string {
 
 		if r == '>' && !inSingleQuote && !inDoubleQuote {
 			nextRune, hasNext := peekNext(runes, i)
+			currentToken := builder.String()
+
+			if len(currentToken) == 1 && currentToken[0] >= '0' && currentToken[0] <= '9' {
+				builder.Reset()
+
+				if hasNext && nextRune == '>' {
+					tokens = append(tokens, currentToken+">>")
+					i++
+				} else {
+					tokens = append(tokens, currentToken+">")
+				}
+				continue
+			}
 
 			if hasNext && nextRune == '>' {
-				if builder.Len() > 0 {
-					tokens = append(tokens, builder.String())
-					builder.Reset()
-				}
+				flush(&builder, &tokens)
 				tokens = append(tokens, ">>")
 				i++
-			} else {
-				if builder.String() == "1" {
-					builder.Reset()
-				}
-
-				if builder.Len() > 0 {
-					tokens = append(tokens, builder.String())
-					builder.Reset()
-				}
-
-				tokens = append(tokens, ">")
+				continue
 			}
+
+			flush(&builder, &tokens)
+			tokens = append(tokens, ">")
+			builder.Reset()
 			continue
 		}
 
-		if r == ' ' && !inSingleQuote && !inDoubleQuote {
-			if builder.Len() > 0 {
-				tokens = append(tokens, builder.String())
-				builder.Reset()
-			}
-
+		if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
+			flush(&builder, &tokens)
 			continue
 		}
 
 		builder.WriteRune(r)
 	}
+	flush(&builder, &tokens)
 
-	if builder.Len() > 0 {
-		tokens = append(tokens, builder.String())
-	}
-
-	// fmt.Println("tokens:", tokens)
-	// fmt.Println("token length", len(tokens))
 	return tokens
 }
 
@@ -255,6 +251,13 @@ func peekNext(runes []rune, i int) (rune, bool) {
 		return runes[nextIndx], true
 	}
 	return 0, false
+}
+
+func flush(b *strings.Builder, tokens *[]string) {
+	if b.Len() > 0 {
+		*tokens = append(*tokens, b.String())
+		b.Reset()
+	}
 }
 
 func isEscapableInDoubleQuote(r rune) bool {

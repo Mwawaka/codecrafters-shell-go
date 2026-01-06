@@ -78,7 +78,7 @@ func main() {
 				redirectIndex = i
 				isAppend = (tt == TokenRedirectOutAppend)
 
-				if i > 0 && parts[i-1] == "2" {
+				if i > 0 && parts[i-1] == "2>" {
 					fileDescriptor = fdStderr
 				}
 
@@ -133,9 +133,9 @@ func main() {
 
 func tokenType(token string) int {
 	switch token {
-	case ">":
+	case ">" ,"1>" :
 		return TokenRedirectOut
-	case ">>":
+	case ">>","1>>":
 		return TokenRedirectOutAppend
 	default:
 		return TokenWord

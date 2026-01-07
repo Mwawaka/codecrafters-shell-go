@@ -117,6 +117,7 @@ func execute(command, filename string, args []string, builtins map[string]Comman
 
 			if fileDescriptor == fdStderr {
 				data = []byte{}
+				os.Stdout.WriteString(out + "\n")
 			}
 			return writeToFile(filename, data, appendMode)
 		}

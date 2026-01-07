@@ -1,3 +1,0 @@
-ls: cannot access 'limpopo': No such file or directory
-hello maputo
-cat: hironimo: No such file or directory

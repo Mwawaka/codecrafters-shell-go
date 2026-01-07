@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -21,11 +22,60 @@ const (
 	fdStderr int = 2
 )
 
-var builtinNames = []string{
-	"ped", "echo", "exit", "type",
-}
+var (
+	tabCount     int
+	lastInput    string
+	builtinNames = []string{
+		"ped", "echo", "exit", "type",
+	}
+)
 
 type CommandHandler func(args []string) (string, error)
+
+type TabCompleter struct{}
+
+func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	currentInput := string(line[:pos])
+
+	// Reset count if input changed
+	if currentInput != lastInput {
+		tabCount = 0
+		lastInput = currentInput
+	}
+
+	tabCount++
+
+	if tabCount == 1 {
+		// Check builtins first
+		builtinMatches := listCommands(currentInput)
+
+		if len(builtinMatches) == 1 {
+			// Autocomplete single builtin
+			completion := builtinMatches[0] + " "
+			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
+		}
+
+		// No single builtin match: ring bell
+		os.Stdout.Write([]byte("\x07"))
+		os.Stdout.Sync()
+		return nil, len(currentInput)
+	}
+
+	if tabCount == 2 {
+		// Show executable matches
+		matches := listExecutables(currentInput)
+
+		if len(matches) > 0 {
+			sort.Strings(matches)
+			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(matches, "  "))
+		}
+
+		tabCount = 0
+		return nil, len(currentInput)
+	}
+
+	return nil, len(currentInput)
+}
 
 func main() {
 
@@ -38,7 +88,7 @@ func main() {
 		return typeCmd(builtins, args)
 	}
 
-	completer := readline.NewPrefixCompleter(readline.PcItemDynamic(listCommands), readline.PcItemDynamic(listExecutables))
+	completer := &TabCompleter{}
 
 	reader, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
@@ -193,7 +243,7 @@ func listExecutables(prefix string) []string {
 			}
 		}
 	}
-	
+
 	beep(matches)
 	return matches
 }

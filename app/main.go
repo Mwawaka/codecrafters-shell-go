@@ -38,7 +38,7 @@ func main() {
 		return typeCmd(builtins, args)
 	}
 
-	completer := readline.NewPrefixCompleter(readline.PcItemDynamic(listCommands))
+	completer := readline.NewPrefixCompleter(readline.PcItemDynamic(listCommands), readline.PcItemDynamic(listExecutables))
 
 	reader, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",

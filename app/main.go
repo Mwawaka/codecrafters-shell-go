@@ -37,13 +37,7 @@ func main() {
 		return typeCmd(builtins, args)
 	}
 
-	var cmdItems []readline.PrefixCompleterInterface
-
-	for _, cmd := range builtinNames {
-		cmdItems = append(cmdItems, readline.PcItem(cmd))
-	}
-
-	completer := readline.NewPrefixCompleter(cmdItems...)
+	completer := readline.NewPrefixCompleter(readline.PcItemDynamic(listCommands))
 
 	reader, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
@@ -125,6 +119,21 @@ func main() {
 	}
 }
 
+func listCommands(prefix string) []string {
+	var matches []string
+
+	for _, cmd := range builtinNames {
+		if strings.HasPrefix(cmd, prefix) {
+			matches = append(matches, cmd)
+		}
+	}
+
+	if len(matches) == 0 {
+		os.Stdout.Write([]byte("\x07"))
+		os.Stdout.Sync()
+	}
+	return matches
+}
 func execute(command, filename string, args []string, builtins map[string]CommandHandler, fileDescriptor int, appendMode bool) error {
 	var buffer bytes.Buffer
 	var stdout io.Writer = os.Stdout

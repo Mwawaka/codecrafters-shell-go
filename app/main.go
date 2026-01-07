@@ -147,7 +147,7 @@ func execute(command, filename string, args []string, builtins map[string]Comman
 			return writeToFile(filename, data, appendMode)
 		}
 
-		os.Stdout.WriteString(out)
+		fmt.Fprintln(os.Stdout, out)
 
 		return nil
 	}

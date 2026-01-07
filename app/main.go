@@ -221,7 +221,7 @@ func parse(command string) []string {
 	}
 
 	flush(&builder, &tokens)
-	fmt.Println("Tokens: ", tokens)
+	// fmt.Println("Tokens: ", tokens)
 	return tokens
 }
 

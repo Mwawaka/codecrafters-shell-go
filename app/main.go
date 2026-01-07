@@ -8,35 +8,28 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
 const (
+	fdStdin  int = 0
 	fdStdout int = 1
 	fdStderr int = 2
-	none     int = 3
-)
-
-const (
-	TokenWord                = iota
-	TokenRedirectOut         // '>'
-	TokenRedirectOutAppend   // '>>'
-	TokenRedirectError       //2>
-	TokenRedirectErrorAppend //>>2
 )
 
 type CommandHandler func(args []string) (string, error)
 
 func main() {
 
-	var commands = map[string]CommandHandler{
+	var builtins = map[string]CommandHandler{
 		"echo": echo,
 		"pwd":  pwd,
 	}
 
-	commands["type"] = func(args []string) (string, error) {
-		return typeCmd(commands, args)
+	builtins["type"] = func(args []string) (string, error) {
+		return typeCmd(builtins, args)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -70,110 +63,89 @@ func main() {
 			continue
 		}
 
+		var filename string
+		args := parts[1:]
 		redirectIndex := -1
+		appendMode := false
 		fileDescriptor := fdStdout
-		isAppend := false
 
 		for i, token := range parts {
-			tt := tokenType(token)
-			if tt == TokenRedirectOutAppend || tt == TokenRedirectErrorAppend {
+			fd, isAppend, isRedirect := parseRedirect(token)
+
+			if isRedirect {
 				redirectIndex = i
-				isAppend = !isAppend
-
-				if i > 0 && parts[i-1] == "2>>" {
-					fileDescriptor = fdStderr
-				}
-
+				fileDescriptor = fd
+				appendMode = isAppend
 				break
 			}
 		}
 
 		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
-			args := parts[1:redirectIndex]
-			filename := parts[redirectIndex+1]
-
-			// if fileDescriptor == fdStderr {
-			// 	args = parts[1 : redirectIndex-1]
-			
-
-			// }
-
-			err := handleRedirect(cmdName, filename, args, commands, fileDescriptor, isAppend)
-
-			if err != nil {
-				var exitErr *exec.ExitError
-
-				if errors.As(err, &exitErr) {
-					fmt.Print()
-				} else if errors.Is(err, exec.ErrNotFound) {
-					fmt.Fprintf(os.Stderr, "%s: command not found\n", cmdName)
-				} else {
-					fmt.Fprintln(os.Stderr, err)
-				}
-			}
-			continue
+			filename = parts[redirectIndex+1]
+			args = parts[1:redirectIndex]
 		}
 
-		if handler, exists := commands[cmdName]; exists {
-			out, err := handler(parts[1:])
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				continue
-			}
-			fmt.Println(out)
-			continue
-		}
+		err = execute(cmdName, filename, args, builtins, fileDescriptor, appendMode)
 
-		if err := runExternal(cmdName, parts[1:], os.Stdout, none); err != nil {
+		if err != nil {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
-				continue
+
+			} else if errors.Is(err, exec.ErrNotFound) {
+				fmt.Fprintf(os.Stderr, "%s: command not found\n", cmdName)
+			} else {
+				fmt.Fprintln(os.Stderr, err)
 			}
-			fmt.Printf("%s: command not found\n", cmdName)
 		}
 	}
 }
 
-func tokenType(token string) int {
-	switch token {
-	case ">", "1>":
-		return TokenRedirectOut
-	case ">>", "1>>":
-		return TokenRedirectOutAppend
-	case "2>":
-		return TokenRedirectError
-	case "2>>":
-		return TokenRedirectErrorAppend
-	default:
-		return TokenWord
-	}
-}
-
-func handleRedirect(cmdName, filename string, args []string, commands map[string]CommandHandler, fileDescriptor int, appendMode bool) error {
+func execute(command, filename string, args []string, builtins map[string]CommandHandler, fileDescriptor int, appendMode bool) error {
 	var buffer bytes.Buffer
+	var stdout io.Writer = os.Stdout
+	var stderr io.Writer = os.Stderr
 
-	if handler, exists := commands[cmdName]; exists {
+	if handler, exists := builtins[command]; exists {
 		out, err := handler(args)
 
 		if err != nil {
 			return err
 		}
 
-		if fileDescriptor == fdStdout {
-			return writeToFile(filename, []byte(out+"\n"), appendMode)
+		if filename != "" {
+			data := []byte(out + "\n")
+
+			if fileDescriptor == fdStderr {
+				data = []byte{}
+			}
+			return writeToFile(filename, data, appendMode)
 		}
 
-		writeToFile(filename, []byte{}, appendMode)
-		fmt.Println(out)
+		os.Stdout.WriteString(out)
+
+		if len(out) > 0 && out[len(out)-1] != '\n' {
+			os.Stdout.WriteString("\n")
+		}
+
 		return nil
 	}
 
-	if err := runExternal(cmdName, args, &buffer, fileDescriptor); err != nil {
-		writeToFile(filename, buffer.Bytes(), appendMode)
-		return err
+	if filename != "" {
+		switch fileDescriptor {
+		case fdStdout:
+			stdout = &buffer
+		case fdStderr:
+			stderr = &buffer
+		}
 	}
 
-	return writeToFile(filename, buffer.Bytes(), appendMode)
+	err := runExternal(command, args, stdout, stderr)
+
+	if filename != "" {
+		return writeToFile(filename, buffer.Bytes(), appendMode)
+	}
+
+	return err
 }
 
 func parse(command string) []string {
@@ -249,7 +221,7 @@ func parse(command string) []string {
 	}
 
 	flush(&builder, &tokens)
-	// fmt.Println("Tokens: ", tokens)
+	fmt.Println("Tokens: ", tokens)
 	return tokens
 }
 
@@ -272,6 +244,34 @@ func isEscapableInDoubleQuote(r rune) bool {
 	return r == '"' || r == '\\' || r == '$' || r == '`' || r == '\n'
 }
 
+func parseRedirect(token string) (fd int, isAppend, isRedirect bool) {
+	var prefix string
+
+	if strings.HasSuffix(token, ">>") {
+		isRedirect = true
+		isAppend = true
+		prefix = strings.TrimSuffix(token, ">>")
+	} else if strings.HasSuffix(token, ">") {
+		isRedirect = true
+		isAppend = false
+		prefix = strings.TrimSuffix(token, ">")
+	} else {
+		return 0, false, false
+	}
+
+	if prefix == "" {
+		return 1, isAppend, true
+	}
+
+	fd, err := strconv.Atoi(prefix)
+
+	if err != nil {
+		return 0, false, false
+	}
+
+	return fd, isAppend, isRedirect
+}
+
 func exit() {
 	os.Exit(0)
 }
@@ -280,12 +280,12 @@ func echo(args []string) (string, error) {
 	return strings.Join(args, " "), nil
 }
 
-func typeCmd(commands map[string]CommandHandler, args []string) (string, error) {
+func typeCmd(builtins map[string]CommandHandler, args []string) (string, error) {
 
 	msg := make([]string, len(args))
 
 	for i, arg := range args {
-		_, exists := commands[arg]
+		_, exists := builtins[arg]
 
 		if arg == "exit" || arg == "cd" || exists {
 			msg[i] = fmt.Sprintf("%s is a shell builtin", arg)
@@ -304,21 +304,10 @@ func typeCmd(commands map[string]CommandHandler, args []string) (string, error) 
 	return strings.Join(msg, "\n"), nil
 }
 
-func runExternal(cmdName string, args []string, writer io.Writer, fileDescriptor int) error {
+func runExternal(cmdName string, args []string, stdout, stderr io.Writer) error {
 	cmd := exec.Command(cmdName, args...)
-
-	switch fileDescriptor {
-	case fdStdout:
-		cmd.Stdout = writer
-		cmd.Stderr = os.Stderr
-	case fdStderr:
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = writer
-	default:
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd.Run()
 }
 

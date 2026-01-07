@@ -58,7 +58,7 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		// No single builtin match: ring bell
 		os.Stdout.Write([]byte("\x07"))
 		os.Stdout.Sync()
-		return nil, len(currentInput)
+		return [][]rune{}, len(currentInput)
 	}
 
 	if tabCount == 2 {
@@ -68,10 +68,11 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		if len(matches) > 0 {
 			sort.Strings(matches)
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(matches, "  "))
+
 		}
 
 		tabCount = 0
-		return nil, len(currentInput)
+		return [][]rune{[]rune("")}, len(currentInput)
 	}
 
 	return nil, len(currentInput)

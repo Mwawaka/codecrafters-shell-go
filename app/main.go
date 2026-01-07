@@ -58,15 +58,17 @@ func main() {
 	defer reader.Close()
 
 	for {
-		fmt.Print("$ ")
 		command, err := reader.Readline()
 
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
-			os.Exit(1)
+			continue
 		}
 
-		parts := parse(command[:len(command)-1])
+		parts := parse(strings.TrimSpace(command))
 
 		if len(parts) == 0 || parts[0] == "" {
 			continue

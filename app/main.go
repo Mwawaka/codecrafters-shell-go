@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/chzyer/readline"
 )
 
 const (
@@ -18,6 +19,10 @@ const (
 	fdStdout int = 1
 	fdStderr int = 2
 )
+
+var builtinNames = []string{
+	"ped", "echo", "exit", "type",
+}
 
 type CommandHandler func(args []string) (string, error)
 
@@ -32,11 +37,29 @@ func main() {
 		return typeCmd(builtins, args)
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	var cmdItems []readline.PrefixCompleterInterface
+
+	for _, cmd := range builtinNames {
+		cmdItems = append(cmdItems, readline.PcItem(cmd))
+	}
+
+	completer := readline.NewPrefixCompleter(cmdItems...)
+
+	reader, err := readline.NewEx(&readline.Config{
+		Prompt:       "$ ",
+		AutoComplete: completer,
+	})
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error starting shell: %v", err)
+		os.Exit(1)
+	}
+
+	defer reader.Close()
 
 	for {
 		fmt.Print("$ ")
-		command, err := reader.ReadString('\n')
+		command, err := reader.Readline()
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
@@ -123,10 +146,6 @@ func execute(command, filename string, args []string, builtins map[string]Comman
 		}
 
 		os.Stdout.WriteString(out)
-
-		if len(out) > 0 && out[len(out)-1] != '\n' {
-			os.Stdout.WriteString("\n")
-		}
 
 		return nil
 	}

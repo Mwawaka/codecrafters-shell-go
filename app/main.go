@@ -193,6 +193,7 @@ func listExecutables(prefix string) []string {
 			}
 		}
 	}
+	
 	beep(matches)
 	return matches
 }

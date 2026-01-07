@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"unicode"
@@ -128,11 +129,79 @@ func listCommands(prefix string) []string {
 		}
 	}
 
+	beep(matches)
+	return matches
+}
+
+func listExecutables(prefix string) []string {
+	var matches []string
+	seen := make(map[string]bool)
+	pathEnv := os.Getenv("PATH")
+
+	if pathEnv == "" {
+		return nil
+	}
+
+	separator := ":" //Unix based systems
+
+	if runtime.GOOS == "windows" {
+		separator = ";"
+	}
+
+	dirs := strings.Split(pathEnv, separator)
+
+	for _, dir := range dirs {
+		if dir == "" {
+			continue
+		}
+
+		entries, err := os.ReadDir(dir)
+
+		if err != nil {
+			continue // skips bad dirs
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue // skips subdirs
+			}
+
+			name := entry.Name()
+
+			// no auto completion for hidden files by default
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+
+			// check executable (Unix only - Windows alll files are "executable" )
+			if runtime.GOOS != "windows" {
+				info, err := entry.Info()
+
+				if err != nil {
+					continue
+				}
+
+				// check if file is executable
+				if info.Mode()&0111 == 0 {
+					continue
+				}
+			}
+
+			if strings.HasPrefix(name, prefix) && !seen[name] {
+				matches = append(matches, name)
+				seen[name] = true
+			}
+		}
+	}
+	beep(matches)
+	return matches
+}
+
+func beep(matches []string) {
 	if len(matches) == 0 {
 		os.Stdout.Write([]byte("\x07"))
 		os.Stdout.Sync()
 	}
-	return matches
 }
 func execute(command, filename string, args []string, builtins map[string]CommandHandler, fileDescriptor int, appendMode bool) error {
 	var buffer bytes.Buffer

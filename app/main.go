@@ -28,6 +28,7 @@ var (
 	builtinNames = []string{
 		"ped", "echo", "exit", "type",
 	}
+	cachedMatches []string
 )
 
 type CommandHandler func(args []string) (string, error)
@@ -35,13 +36,14 @@ type CommandHandler func(args []string) (string, error)
 type TabCompleter struct{}
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-	var cachedMatches []string
+
 	currentInput := string(line[:pos])
 
 	// Reset count if input changed
 	if currentInput != lastInput {
 		tabCount = 0
 		lastInput = currentInput
+		cachedMatches = nil
 	}
 
 	tabCount++
@@ -55,7 +57,7 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 			completion := builtinMatches[0] + " "
 			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
 		}
-		
+
 		builtinMatches = append(builtinMatches, listExecutables(currentInput)...)
 		cachedMatches = builtinMatches
 
@@ -66,14 +68,13 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	}
 
 	if tabCount == 2 {
-
 		if len(cachedMatches) > 0 {
 			sort.Strings(cachedMatches)
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(cachedMatches, "  "))
 
 		}
-
 		tabCount = 0
+		cachedMatches = nil
 		return [][]rune{[]rune("")}, len(currentInput)
 	}
 

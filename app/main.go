@@ -51,15 +51,14 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	if tabCount == 1 {
 		// Check builtins first
 		builtinMatches := listCommands(currentInput)
+		executableMatches := listExecutables(currentInput)
+		cachedMatches = executableMatches
 
 		if len(builtinMatches) == 1 {
 			// Autocomplete single builtin
 			completion := builtinMatches[0] + " "
 			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
 		}
-
-		builtinMatches = append(builtinMatches, listExecutables(currentInput)...)
-		cachedMatches = builtinMatches
 
 		// No single builtin match: ring bell
 		os.Stdout.Write([]byte("\x07"))

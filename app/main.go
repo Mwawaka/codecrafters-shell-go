@@ -36,7 +36,6 @@ type CommandHandler func(args []string) (string, error)
 type TabCompleter struct{}
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-
 	currentInput := string(line[:pos])
 
 	// Reset count if input changed
@@ -61,28 +60,59 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		}
 
 		if len(executableMatches) == 1 {
+			// Autocomplete single builtin
 			completion := executableMatches[0] + " "
 			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
-		}
+		} else if len(executableMatches) > 1 {
+			completion := lcp(executableMatches)
+			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
+		} else {
 
-		// No single builtin match: ring bell
-		os.Stdout.Write([]byte("\x07"))
-		os.Stdout.Sync()
-		return [][]rune{}, len(currentInput)
+			// No single builtin match: ring bell
+			os.Stdout.Write([]byte("\x07"))
+			os.Stdout.Sync()
+			return [][]rune{}, len(currentInput)
+		}
 	}
 
 	if tabCount == 2 {
+		// Show executable matches
+
 		if len(cachedMatches) > 0 {
 			sort.Strings(cachedMatches)
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(cachedMatches, "  "))
-
 		}
+
 		tabCount = 0
 		cachedMatches = nil
 		return [][]rune{[]rune("")}, len(currentInput)
 	}
 
 	return nil, len(currentInput)
+}
+
+func lcp(strs []string) string {
+
+	if len(strs) == 0 {
+		return ""
+	}
+
+	if len(strs) == 1 {
+		return strs[0]
+	}
+
+	sort.Strings(strs)
+
+	firstString := strs[0]
+	lastString := strs[len(strs)-1]
+
+	i := 0
+
+	for i < len(firstString) && i < len(lastString) && firstString[i] == lastString[i] {
+		i++
+	}
+
+	return firstString[:i]
 }
 
 func main() {

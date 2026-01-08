@@ -35,6 +35,7 @@ type CommandHandler func(args []string) (string, error)
 type TabCompleter struct{}
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	var cachedMatches []string
 	currentInput := string(line[:pos])
 
 	// Reset count if input changed
@@ -48,13 +49,15 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	if tabCount == 1 {
 		// Check builtins first
 		builtinMatches := listCommands(currentInput)
-		builtinMatches = append(builtinMatches, listExecutables(currentInput)...)
 
 		if len(builtinMatches) == 1 {
 			// Autocomplete single builtin
 			completion := builtinMatches[0] + " "
 			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
 		}
+		
+		builtinMatches = append(builtinMatches, listExecutables(currentInput)...)
+		cachedMatches = builtinMatches
 
 		// No single builtin match: ring bell
 		os.Stdout.Write([]byte("\x07"))
@@ -63,12 +66,10 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	}
 
 	if tabCount == 2 {
-		// Show executable matches
-		matches := listExecutables(currentInput)
 
-		if len(matches) > 0 {
-			sort.Strings(matches)
-			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(matches, "  "))
+		if len(cachedMatches) > 0 {
+			sort.Strings(cachedMatches)
+			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(cachedMatches, "  "))
 
 		}
 

@@ -48,6 +48,7 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	if tabCount == 1 {
 		// Check builtins first
 		builtinMatches := listCommands(currentInput)
+		builtinMatches = append(builtinMatches, listExecutables(currentInput)...)
 
 		if len(builtinMatches) == 1 {
 			// Autocomplete single builtin

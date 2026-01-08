@@ -60,6 +60,11 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
 		}
 
+		if len(executableMatches) == 1 {
+			completion := executableMatches[0] + " "
+			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
+		}
+
 		// No single builtin match: ring bell
 		os.Stdout.Write([]byte("\x07"))
 		os.Stdout.Sync()

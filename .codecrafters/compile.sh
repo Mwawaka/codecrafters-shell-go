@@ -8,4 +8,7 @@
 
 set -e # Exit on failure
 
-go build -o /tmp/codecrafters-build-shell-go app/*.go
+# go build -o /tmp/codecrafters-build-shell-go app/*.go
+
+# go builds the package automatically includinf all dependencies from internal
+go build -o /tmp/codecrafters-build-shell-go app/

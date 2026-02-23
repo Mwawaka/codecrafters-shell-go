@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -86,7 +87,8 @@ func lcp(strs []string) string {
 		return strs[0]
 	}
 
-	sort.Strings(strs)
+	// sort.Strings(strs)
+	slices.Sort(strs) // more ergonomic compared to sort package
 
 	firstString := strs[0]
 	lastString := strs[len(strs)-1]
@@ -153,7 +155,7 @@ func listExecutables(prefix string) []string {
 				continue
 			}
 
-			// check executable (Unix only - Windows alll files are "executable" )
+			// check executable (Unix only - Windows all files are "executable" )
 			if runtime.GOOS != "windows" {
 				info, err := entry.Info()
 

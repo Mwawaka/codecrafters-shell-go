@@ -1,11 +1,12 @@
 package parser
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
 
-func Parse(command string) []string {
+func Parse(command string) ([]string, error) {
 	runes := []rune(command)
 	var builder strings.Builder
 	tokens := []string{}
@@ -77,9 +78,13 @@ func Parse(command string) []string {
 		builder.WriteRune(r)
 	}
 
+	if inSingleQuote || inDoubleQuote {
+		return nil, fmt.Errorf("unclosed quote")
+	}
+
 	flush(&builder, &tokens)
 	// fmt.Println("Tokens: ", tokens)
-	return tokens
+	return tokens, nil
 }
 
 func peekNext(runes []rune, i int) (rune, bool) {

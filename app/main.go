@@ -54,7 +54,12 @@ func main() {
 			continue
 		}
 
-		parts := parser.Parse(strings.TrimSpace(command))
+		parts, err := parser.Parse(strings.TrimSpace(command))
+
+		if err!=nil{
+			fmt.Fprintln(os.Stderr,err)
+			continue
+		}
 
 		if len(parts) == 0 || parts[0] == "" {
 			continue

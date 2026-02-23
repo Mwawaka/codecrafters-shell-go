@@ -38,3 +38,29 @@ func Redirect(token string) (fd int, isAppend, isRedirect bool) {
 
 	return fd, isAppend, isRedirect
 }
+
+func Pipe(tokens []string) [][]string {
+	var commands [][]string
+	var current []string
+
+	for _, token := range tokens {
+
+		if token == "|" {
+			if len(current) > 0 {
+				commands = append(commands, current)
+				current = nil
+			}
+
+			continue
+		}
+
+		current = append(current, token)
+	}
+
+	if len(current) > 0 {
+		commands = append(commands, current)
+	}
+
+	// 	fmt.Println("Commands: ",commands)
+	return commands
+}

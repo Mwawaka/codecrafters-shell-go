@@ -40,6 +40,13 @@ func (cr *CommandRunner) run() error {
 	return cmd.Run()
 }
 
+func run(command string, args []string, stdout, stderr io.Writer) error {
+	cmd := exec.Command(command, args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd.Run()
+}
+
 func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) error {
 	if len(pipeline) == 0 {
 		return nil
@@ -74,18 +81,8 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 	// Single command without pipeline
 	if len(pipeline) == 1 {
 		var buffer bytes.Buffer
-		// var stdin io.Reader = os.Stdin
 		var stdout io.Writer = os.Stdout
 		var stderr io.Writer = os.Stderr
-
-		// runner := &CommandRunner{
-		// 	Name:     command,
-		// 	Args:     args,
-		// 	Stdin:    stdin,
-		// 	Stdout:   stdout,
-		// 	Stderr:   stderr,
-		// 	Builtins: builtins,
-		// }
 
 		if handler, exists := builtins[command]; exists {
 			out, err := handler(args)
@@ -118,7 +115,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 			}
 		}
 
-		err := runProgram(command,args,stdout,stderr)
+		err := run(command, args, stdout, stderr)
 
 		if filename != "" {
 			return writeToFile(filename, buffer.Bytes(), appendMode)
@@ -180,7 +177,6 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 			stdout = pipeWriters[i]
 			pipeWriter = pipeWriters[i]
 		} else {
-			// Last command
 			if filename != "" {
 				buffer = &bytes.Buffer{}
 				switch fileDescriptor {
@@ -196,7 +192,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 
 		wg.Add(1)
 
-		go func(name string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, buf *bytes.Buffer, isLast bool, writer *os.File) {
+		go func(name string, args []string, stdin io.Reader, stdout, stderr io.Writer, buf *bytes.Buffer, isLast bool, writer *os.File) {
 			defer wg.Done()
 
 			runner := &CommandRunner{
@@ -233,12 +229,4 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 	}
 
 	return nil
-}
-
-
-func runProgram(command string, args []string, stdout, stderr io.Writer) error {
-	cmd := exec.Command(command, args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	return cmd.Run()
 }

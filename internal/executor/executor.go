@@ -201,7 +201,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 				Args:     args,
 				Stdin:    stdin,
 				Stdout:   stdout,
-				Stderr:   os.Stderr,
+				Stderr:   stderr,
 				Builtins: builtins,
 			}
 

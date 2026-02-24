@@ -164,6 +164,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 	for i := 0; i < numCommands; i++ {
 		var stdin io.Reader = os.Stdin
 		var stdout io.Writer = os.Stdout
+		var stderr io.Writer = os.Stderr
 		var buffer *bytes.Buffer
 		var pipeWriter *os.File
 
@@ -184,15 +185,17 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 				switch fileDescriptor {
 				case redirect.FdStdout:
 					stdout = buffer
+					stderr = os.Stderr
 				case redirect.FdStderr:
 					stdout = os.Stdout
+					stderr = buffer
 				}
 			}
 		}
 
 		wg.Add(1)
 
-		go func(name string, args []string, stdin io.Reader, stdout io.Writer, buf *bytes.Buffer, isLast bool, writer *os.File) {
+		go func(name string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, buf *bytes.Buffer, isLast bool, writer *os.File) {
 			defer wg.Done()
 
 			runner := &CommandRunner{
@@ -219,7 +222,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 					addError(err)
 				}
 			}
-		}(command, args, stdin, stdout, buffer, i == numCommands-1, pipeWriter)
+		}(command, args, stdin, stdout, stderr, buffer, i == numCommands-1, pipeWriter)
 	}
 
 	wg.Wait()

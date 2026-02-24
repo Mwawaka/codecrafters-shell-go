@@ -65,7 +65,9 @@ func main() {
 			continue
 		}
 
-		cmdName := parts[0]
+		pipeline:=redirect.Pipe(parts)
+
+		cmdName := pipeline[0][0]
 
 		if cmdName == "exit" {
 			break
@@ -80,7 +82,7 @@ func main() {
 		}
 
 		var filename string
-		args := parts[1:]
+		args := pipeline[0][1:]
 		redirectIndex := -1
 		appendMode := false
 		fileDescriptor := redirect.FdStdout

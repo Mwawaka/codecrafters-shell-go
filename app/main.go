@@ -56,8 +56,8 @@ func main() {
 
 		parts, err := parser.Parse(strings.TrimSpace(command))
 
-		if err!=nil{
-			fmt.Fprintln(os.Stderr,err)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
@@ -65,7 +65,11 @@ func main() {
 			continue
 		}
 
-		pipeline:=redirect.Pipe(parts)
+		pipeline := redirect.Pipe(parts)
+
+		if len(pipeline) == 0 {
+			continue
+		}
 
 		cmdName := pipeline[0][0]
 
@@ -81,29 +85,7 @@ func main() {
 			continue
 		}
 
-		var filename string
-		args := pipeline[0][1:]
-		redirectIndex := -1
-		appendMode := false
-		fileDescriptor := redirect.FdStdout
-
-		for i, token := range parts {
-			fd, isAppend, isRedirect := redirect.Redirect(token)
-
-			if isRedirect {
-				redirectIndex = i
-				fileDescriptor = fd
-				appendMode = isAppend
-				break
-			}
-		}
-
-		if redirectIndex != -1 && redirectIndex+1 < len(parts) {
-			filename = parts[redirectIndex+1]
-			args = parts[1:redirectIndex]
-		}
-
-		err = executor.Execute(cmdName, filename, args, commands, fileDescriptor, appendMode)
+		err = executor.Execute(pipeline, commands)
 
 		if err != nil {
 			var exitErr *exec.ExitError

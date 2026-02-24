@@ -10,14 +10,14 @@ func Parse(command string) ([]string, error) {
 	runes := []rune(command)
 	var builder strings.Builder
 	tokens := []string{}
-	inSingleQuote := false
-	inDoubleQuote := false
+	inSingleQuotes := false
+	inDoubleQuotes := false
 	inBackSlash := false
 
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
 		if inBackSlash {
-			if inDoubleQuote && !isEscapableInDoubleQuote(r) {
+			if inDoubleQuotes && !isEscapableInDoubleQuotes(r) {
 				builder.WriteRune('\\')
 			}
 
@@ -26,22 +26,22 @@ func Parse(command string) ([]string, error) {
 			continue
 		}
 
-		if r == '\'' && !inDoubleQuote {
-			inSingleQuote = !inSingleQuote
+		if r == '\'' && !inDoubleQuotes {
+			inSingleQuotes = !inSingleQuotes
 			continue
 		}
 
-		if r == '"' && !inSingleQuote {
-			inDoubleQuote = !inDoubleQuote
+		if r == '"' && !inSingleQuotes {
+			inDoubleQuotes = !inDoubleQuotes
 			continue
 		}
 
-		if r == '\\' && !inSingleQuote {
+		if r == '\\' && !inSingleQuotes {
 			inBackSlash = true
 			continue
 		}
 
-		if r == '>' && !inSingleQuote && !inDoubleQuote {
+		if r == '>' && !inSingleQuotes && !inDoubleQuotes {
 			nextRune, hasNext := peekNext(runes, i)
 			currentToken := builder.String()
 
@@ -70,7 +70,13 @@ func Parse(command string) ([]string, error) {
 			continue
 		}
 
-		if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
+		if r=='|' && !inSingleQuotes && !inDoubleQuotes{
+			tokens = flush(&builder,tokens)
+			tokens = append(tokens, "|")
+			continue
+		}
+
+		if unicode.IsSpace(r) && !inSingleQuotes && !inDoubleQuotes {
 			tokens = flush(&builder, tokens)
 			continue
 		}
@@ -78,7 +84,7 @@ func Parse(command string) ([]string, error) {
 		builder.WriteRune(r)
 	}
 
-	if inSingleQuote || inDoubleQuote {
+	if inSingleQuotes || inDoubleQuotes {
 		return nil, fmt.Errorf("unclosed quote")
 	}
 
@@ -89,9 +95,11 @@ func Parse(command string) ([]string, error) {
 
 func peekNext(runes []rune, i int) (rune, bool) {
 	nextIndx := i + 1
+	
 	if nextIndx < len(runes) {
 		return runes[nextIndx], true
 	}
+	
 	return 0, false
 }
 

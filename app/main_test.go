@@ -7,7 +7,7 @@ import (
 )
 
 func Test_tokenizer(t *testing.T) {
-	val := parser.Parse("echo")
+	val, _ := parser.Parse("echo")
 	if len(val) == 0 {
 		t.Error("incorrect result: expected echo, got ", val)
 	}

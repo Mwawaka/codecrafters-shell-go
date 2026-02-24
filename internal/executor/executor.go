@@ -161,10 +161,11 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 		}
 	}()
 
-	for i := 0; i < numCommands-1; i++ {
+	for i := 0; i < numCommands; i++ {
 		var stdin io.Reader = os.Stdin
 		var stdout io.Writer = os.Stdout
 		var buffer *bytes.Buffer
+		var pipeWriter *os.File
 
 		subCmd := pipeline[i]
 		command := subCmd[0]
@@ -176,6 +177,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 
 		if i < numCommands-1 {
 			stdout = pipeWriters[i]
+			pipeWriter = pipeWriters[i]
 		} else {
 			if filename != "" {
 				buffer = &bytes.Buffer{}
@@ -190,8 +192,9 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 
 		wg.Add(1)
 
-		go func(name string, args []string, stdin io.Reader, stdout io.Writer, buf *bytes.Buffer, isLast bool) {
+		go func(name string, args []string, stdin io.Reader, stdout io.Writer, buf *bytes.Buffer, isLast bool, writer *os.File) {
 			defer wg.Done()
+
 			runner := &CommandRunner{
 				Name:     name,
 				Args:     args,
@@ -203,6 +206,11 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 
 			if err := runner.run(); err != nil {
 				addError(err)
+			}
+
+			// Close pipe writer immediately after command finishes
+			if writer != nil {
+				writer.Close()
 			}
 
 			// Last command with redirection, write to file

@@ -58,20 +58,20 @@ func Parse(command string) ([]string, error) {
 			}
 
 			if hasNext && nextRune == '>' {
-				flush(&builder, &tokens)
+				tokens = flush(&builder, tokens)
 				tokens = append(tokens, ">>")
 				i++
 				continue
 			}
 
-			flush(&builder, &tokens)
+			tokens = flush(&builder, tokens)
 			tokens = append(tokens, ">")
 			builder.Reset()
 			continue
 		}
 
 		if unicode.IsSpace(r) && !inSingleQuote && !inDoubleQuote {
-			flush(&builder, &tokens)
+			tokens = flush(&builder, tokens)
 			continue
 		}
 
@@ -82,7 +82,7 @@ func Parse(command string) ([]string, error) {
 		return nil, fmt.Errorf("unclosed quote")
 	}
 
-	flush(&builder, &tokens)
+	tokens = flush(&builder, tokens)
 	// fmt.Println("Tokens: ", tokens)
 	return tokens, nil
 }
@@ -95,11 +95,13 @@ func peekNext(runes []rune, i int) (rune, bool) {
 	return 0, false
 }
 
-func flush(b *strings.Builder, tokens *[]string) {
+func flush(b *strings.Builder, tokens []string) []string {
 	if b.Len() > 0 {
-		*tokens = append(*tokens, b.String())
+		tokens = append(tokens, b.String())
 		b.Reset()
 	}
+
+	return tokens
 }
 
 func isEscapableInDoubleQuote(r rune) bool {

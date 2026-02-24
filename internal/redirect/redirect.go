@@ -1,6 +1,7 @@
 package redirect
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -41,26 +42,26 @@ func Redirect(token string) (fd int, isAppend, isRedirect bool) {
 
 func Pipe(tokens []string) [][]string {
 	var commands [][]string
-	var current []string
+	var currentCommand []string
 
 	for _, token := range tokens {
 
 		if token == "|" {
-			if len(current) > 0 {
-				commands = append(commands, current)
-				current = nil
+			if len(currentCommand) > 0 {
+				commands = append(commands, currentCommand)
+				currentCommand = nil
 			}
 
 			continue
 		}
 
-		current = append(current, token)
+		currentCommand = append(currentCommand, token)
 	}
 
-	if len(current) > 0 {
-		commands = append(commands, current)
+	if len(currentCommand) > 0 {
+		commands = append(commands, currentCommand)
 	}
 
-	// 	fmt.Println("Commands: ",commands)
+	fmt.Println("Commands: ", commands)
 	return commands
 }

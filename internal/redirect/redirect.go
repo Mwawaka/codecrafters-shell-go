@@ -1,7 +1,6 @@
 package redirect
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -62,6 +61,6 @@ func Pipe(tokens []string) [][]string {
 		commands = append(commands, currentCommand)
 	}
 
-	fmt.Println("Commands: ", commands)
+	// fmt.Println("Commands: ", commands)
 	return commands
 }

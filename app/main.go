@@ -19,8 +19,9 @@ import (
 func main() {
 
 	var commands = map[string]builtins.CommandHandler{
-		"echo": builtins.Echo,
-		"pwd":  builtins.Pwd,
+		"echo":    builtins.Echo,
+		"pwd":     builtins.Pwd,
+		"history": builtins.History,
 	}
 
 	commands["type"] = func(args []string) (string, error) {
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	completer := autocompleter.NewTabCompleter([]string{
-		"pwd", "echo", "exit", "type",
+		"pwd", "echo", "exit", "type", "cd", "history",
 	})
 
 	reader, err := readline.NewEx(&readline.Config{

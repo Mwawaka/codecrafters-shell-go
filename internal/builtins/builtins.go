@@ -74,3 +74,7 @@ func chDirToHome() error {
 	}
 	return os.Chdir(home)
 }
+
+func History(args []string) (string, error) {
+	return "", nil
+}

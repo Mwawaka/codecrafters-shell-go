@@ -180,12 +180,15 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 			stdout = pipeWriters[i]
 			pipeWriter = pipeWriters[i]
 		} else {
+			// Last command
 			if filename != "" {
 				buffer = &bytes.Buffer{}
 				switch fileDescriptor {
 				case redirect.FdStdout:
 					stdout = buffer
-				case redirect.FdStderr:	
+					stderr = os.Stderr
+				case redirect.FdStderr:
+					stdout = os.Stdout
 					stderr = buffer
 				}
 			}

@@ -90,8 +90,8 @@ func lcp(strs []string) string {
 	// sort.Strings(strs)
 	slices.Sort(strs) // more ergonomic compared to sort package
 
-	firstString := strs[0]
-	lastString := strs[len(strs)-1]
+	firstString := []rune(strs[0])
+	lastString := []rune(strs[len(strs)-1])
 
 	i := 0
 
@@ -99,7 +99,7 @@ func lcp(strs []string) string {
 		i++
 	}
 
-	return firstString[:i]
+	return string(firstString[:i])
 }
 
 func (t *TabCompleter) listCommands(prefix string) []string {

@@ -185,9 +185,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 				switch fileDescriptor {
 				case redirect.FdStdout:
 					stdout = buffer
-					stderr = os.Stderr
-				case redirect.FdStderr:
-					stdout = os.Stdout
+				case redirect.FdStderr:	
 					stderr = buffer
 				}
 			}

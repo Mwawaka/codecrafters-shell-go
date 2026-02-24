@@ -6,10 +6,39 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/builtins"
 	"github.com/codecrafters-io/shell-starter-go/internal/redirect"
 )
+
+type CommandRunner struct {
+	Name     string
+	Args     []string
+	Stdin    io.Reader
+	Stdout   io.Writer
+	Stderr   io.Writer
+	Builtins map[string]builtins.CommandHandler
+}
+
+func (cr *CommandRunner) run() error {
+	if handler, exists := cr.Builtins[cr.Name]; exists {
+		output, err := handler(cr.Args)
+
+		if err != nil {
+			return err
+		}
+
+		_, err = cr.Stdout.Write([]byte(output + "\n"))
+		return err
+	}
+
+	cmd := exec.Command(cr.Name, cr.Args...)
+	cmd.Stdin = cr.Stdin
+	cmd.Stdout = cr.Stdout
+	cmd.Stderr = cr.Stderr
+	return cmd.Run()
+}
 
 func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) error {
 	if len(pipeline) == 0 {
@@ -45,8 +74,18 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 	// Single command without pipeline
 	if len(pipeline) == 1 {
 		var buffer bytes.Buffer
+		var stdin io.Reader = os.Stdin
 		var stdout io.Writer = os.Stdout
 		var stderr io.Writer = os.Stderr
+
+		runner := &CommandRunner{
+			Name:     command,
+			Args:     args,
+			Stdin:    stdin,
+			Stdout:   stdout,
+			Stderr:   stderr,
+			Builtins: builtins,
+		}
 
 		if handler, exists := builtins[command]; exists {
 			out, err := handler(args)
@@ -79,7 +118,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 			}
 		}
 
-		err := runExternal(command, args, stdout, stderr)
+		err := runner.run()
 
 		if filename != "" {
 			return writeToFile(filename, buffer.Bytes(), appendMode)
@@ -89,90 +128,97 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 	}
 
 	// Multiple command handling
-	var cmds []*exec.Cmd
-	var previousRead *os.File
+	var pipes []*os.File
+	var wg sync.WaitGroup
+	var errors []error
+	var errorsMutex sync.Mutex
 
-	// Start all commands except from the last
-	for i := 0; i < len(pipeline)-1; i++ {
-		subCmd := pipeline[i]
-		command := subCmd[0]
-		args := subCmd[1:]
-		cmd := exec.Command(command, args...)
+	addError := func(err error) {
+		errorsMutex.Lock()
+		errors = append(errors, err)
+		errorsMutex.Unlock()
+	}
 
-		if previousRead != nil {
-			cmd.Stdin = previousRead
-		}
+	numCommands := len(pipeline)
+	pipeReaders := make([]*os.File, numCommands-1)
+	pipeWriters := make([]*os.File, numCommands-1)
 
+	for i := 0; i < numCommands-1; i++ {
 		r, w, err := os.Pipe()
 
 		if err != nil {
 			return err
 		}
 
-		cmd.Stdout = w
-		cmd.Stderr = os.Stderr
+		pipeReaders[i] = r
+		pipeWriters[i] = w
+		pipes = append(pipes, r, w)
+	}
 
-		if err := cmd.Start(); err != nil {
-			return err
+	defer func() {
+		for _, p := range pipes {
+			p.Close()
+		}
+	}()
+
+	for i := 0; i < numCommands-1; i++ {
+		var stdin io.Reader = os.Stdin
+		var stdout io.Writer = os.Stdout
+		var buffer *bytes.Buffer
+
+		subCmd := pipeline[i]
+		command := subCmd[0]
+		args := subCmd[1:]
+
+		if i > 0 {
+			stdin = pipeReaders[i-1]
 		}
 
-		cmds = append(cmds, cmd)
-		w.Close()
-		previousRead = r
-	}
-
-	// Handling last command
-	cmd := exec.Command(command, args...)
-
-	if previousRead != nil {
-		cmd.Stdin = previousRead
-	}
-
-	cmd.Stderr = os.Stderr
-	var buffer bytes.Buffer
-
-	if filename != "" {
-		switch fileDescriptor {
-		case redirect.FdStdout:
-			cmd.Stdout = &buffer
-		case redirect.FdStderr:
-			cmd.Stderr = &buffer
-			cmd.Stdout = os.Stdout
+		if i < numCommands-1 {
+			stdout = pipeWriters[i]
+		} else {
+			if filename != "" {
+				buffer = &bytes.Buffer{}
+				switch fileDescriptor {
+				case redirect.FdStdout:
+					stdout = buffer
+				case redirect.FdStderr:
+					stdout = os.Stdout
+				}
+			}
 		}
-	} else {
-		cmd.Stdout = os.Stdout
+
+		wg.Add(1)
+
+		go func(name string, args []string, stdin io.Reader, stdout io.Writer, buf *bytes.Buffer, isLast bool) {
+			defer wg.Done()
+			runner := &CommandRunner{
+				Name:     name,
+				Args:     args,
+				Stdin:    stdin,
+				Stdout:   stdout,
+				Stderr:   os.Stderr,
+				Builtins: builtins,
+			}
+
+			if err := runner.run(); err != nil {
+				addError(err)
+			}
+
+			// Last command with redirection, write to file
+			if isLast && buf != nil && filename != "" {
+				if err := writeToFile(filename, buf.Bytes(), appendMode); err != nil {
+					addError(err)
+				}
+			}
+		}(command, args, stdin, stdout, buffer, i == numCommands-1)
 	}
 
-	if err := cmd.Start(); err != nil {
-		return err
+	wg.Wait()
+
+	if len(errors) > 0 {
+		return errors[0]
 	}
 
-	cmds = append(cmds, cmd)
-
-	if previousRead != nil {
-		previousRead.Close()
-	}
-
-	var lastError error
-
-	for _, cmd := range cmds {
-		if err := cmd.Wait(); err != nil {
-			lastError = err
-		}
-	}
-
-	if filename != "" {
-		if err := writeToFile(filename, buffer.Bytes(), appendMode); err != nil {
-			return err
-		}
-	}
-
-	return lastError
-}
-
-func runExternal(cmdName string, args []string, stdout, stderr io.Writer) error {
-	cmd := exec.Command(cmdName, args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	return cmd.Run()
+	return nil
 }

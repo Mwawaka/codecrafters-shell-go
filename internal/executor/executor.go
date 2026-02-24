@@ -219,7 +219,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 					addError(err)
 				}
 			}
-		}(command, args, stdin, stdout, buffer, i == numCommands-1)
+		}(command, args, stdin, stdout, buffer, i == numCommands-1, pipeWriter)
 	}
 
 	wg.Wait()

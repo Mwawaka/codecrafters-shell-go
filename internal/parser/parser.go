@@ -17,7 +17,7 @@ func Parse(command string) ([]string, error) {
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
 		if inBackSlash {
-			if inDoubleQuotes && !isEscapableInDoubleQuotes(r) {
+			if inDoubleQuotes && !isEscapableInDoubleQuote(r) {
 				builder.WriteRune('\\')
 			}
 

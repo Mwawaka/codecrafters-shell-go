@@ -25,24 +25,29 @@ func (h *History) Add(cmd string) {
 }
 
 func (h *History) Display(args []string) (string, error) {
-
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
-	commands := h.commands
 	if len(h.commands) == 0 {
 		return "", nil
 
 	}
 
 	var builder strings.Builder
+	commands := h.commands
+	startIndex := 0
 
 	if len(args) > 0 {
 		limit, err := strconv.Atoi(args[0])
+
 		if err != nil {
 			return "", err
 		}
-		commands = commands[limit:]
+
+		if limit < len(h.commands) {
+			startIndex = len(h.commands) - limit
+			commands = commands[startIndex:]
+		}
 	}
 
 	for i, cmd := range commands {

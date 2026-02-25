@@ -2,6 +2,7 @@ package builtins
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -24,9 +25,11 @@ func (h *History) Add(cmd string) {
 }
 
 func (h *History) Display(args []string) (string, error) {
+
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
+	commands := h.commands
 	if len(h.commands) == 0 {
 		return "", nil
 
@@ -34,7 +37,15 @@ func (h *History) Display(args []string) (string, error) {
 
 	var builder strings.Builder
 
-	for i, cmd := range h.commands {
+	if len(args) > 0 {
+		limit, err := strconv.Atoi(args[0])
+		if err != nil {
+			return "", err
+		}
+		commands = commands[limit:]
+	}
+
+	for i, cmd := range commands {
 		builder.WriteString(fmt.Sprintf("%4d %s\n", i+1, cmd))
 	}
 

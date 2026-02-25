@@ -51,7 +51,7 @@ func (h *History) Display(args []string) (string, error) {
 	}
 
 	for i, cmd := range commands {
-		builder.WriteString(fmt.Sprintf("%4d %s\n", i+1, cmd))
+		builder.WriteString(fmt.Sprintf("%4d %s\n", startIndex+i+1, cmd))
 	}
 
 	return strings.TrimSuffix(builder.String(), "\n"), nil

@@ -17,11 +17,12 @@ import (
 )
 
 func main() {
+	var history = builtins.NewHistory()
 
 	var commands = map[string]builtins.CommandHandler{
 		"echo":    builtins.Echo,
 		"pwd":     builtins.Pwd,
-		"history": builtins.History,
+		"history": history.Display,
 	}
 
 	commands["type"] = func(args []string) (string, error) {
@@ -55,7 +56,8 @@ func main() {
 			continue
 		}
 
-		parts, err := parser.Parse(strings.TrimSpace(command))
+		trimmedInput := strings.TrimSpace(command)
+		parts, err := parser.Parse(trimmedInput)
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)

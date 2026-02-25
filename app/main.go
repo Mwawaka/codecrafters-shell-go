@@ -57,6 +57,11 @@ func main() {
 		}
 
 		trimmedInput := strings.TrimSpace(command)
+
+		if trimmedInput != "" {
+			history.Add(trimmedInput)
+		}
+
 		parts, err := parser.Parse(trimmedInput)
 
 		if err != nil {

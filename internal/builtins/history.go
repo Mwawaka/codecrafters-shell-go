@@ -35,7 +35,7 @@ func (h *History) Display(args []string) (string, error) {
 	var builder strings.Builder
 
 	for i, cmd := range h.commands {
-		builder.WriteString(fmt.Sprintf("%4d %s", i+1, cmd))
+		builder.WriteString(fmt.Sprintf("%4d %s\n", i+1, cmd))
 	}
 
 	return strings.TrimSuffix(builder.String(), "\n"), nil

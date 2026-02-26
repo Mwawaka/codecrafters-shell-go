@@ -53,7 +53,7 @@ func (h *History) Display(args []string) (string, error) {
 
 				return "", nil
 
-			case "-2":
+			case "-w":
 				if err := h.WriteHistoryToFile(args[1]); err != nil {
 					return "", err
 				}

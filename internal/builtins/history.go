@@ -140,3 +140,65 @@ func (h *History) WriteHistoryToFile(filename string, appendMode bool) error {
 	_, err = file.Write([]byte(builder.String()))
 	return err
 }
+
+func (h *History) LoadHistoryFromFile(filename string) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	file, err := os.Open(filename)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		command := scanner.Text()
+
+		if strings.TrimSpace(command) == "" {
+			continue
+		}
+
+		h.commands = append(h.commands, command)
+	}
+
+	h.tracker = len(h.commands)
+	return scanner.Err()
+}
+
+func (h *History) SaveHistoryToFile(filename string) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	var builder strings.Builder
+	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	file, err := os.OpenFile(filename, flags, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	for _, command := range h.commands {
+		builder.WriteString(fmt.Sprintf("%s\n", command))
+	}
+	_, err = file.Write([]byte(builder.String()))
+	return err
+}
+
+func GetHistory(history func(string) error) error {
+	histFile := os.Getenv("HISTFILE")
+
+	if histFile != "" {
+		if err := history(histFile); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

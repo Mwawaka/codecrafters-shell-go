@@ -29,6 +29,16 @@ func main() {
 		return builtins.Type(commands, args)
 	}
 
+	if err := builtins.GetHistory(history.LoadHistoryFromFile); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not load history: %v\n", err)
+	}
+
+	defer func() {
+		if err := builtins.GetHistory(history.SaveHistoryToFile); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not save history: %v\n", err)
+		}
+	}()
+
 	completer := autocompleter.NewTabCompleter([]string{
 		"pwd", "echo", "exit", "type", "cd", "history",
 	})

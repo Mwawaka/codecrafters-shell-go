@@ -1,7 +1,9 @@
 package builtins
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +40,21 @@ func (h *History) Display(args []string) (string, error) {
 	startIndex := 0
 
 	if len(args) > 0 {
+		if strings.HasPrefix(args[0], "-") {
+			switch args[0] {
+			case "-r":
+				if len(args) < 2 {
+					return "", fmt.Errorf("history: -r requires a filename")
+				}
+
+				if err := h.ReadHistoryFromFile(args[1]); err != nil {
+					return "", err
+				}
+
+				return "", nil
+			}
+		}
+
 		limit, err := strconv.Atoi(args[0])
 
 		if err != nil {
@@ -55,4 +72,28 @@ func (h *History) Display(args []string) (string, error) {
 	}
 
 	return strings.TrimSuffix(builder.String(), "\n"), nil
+}
+
+func (h *History) ReadHistoryFromFile(filename string) error {
+	file, err := os.Open(filename)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		command := scanner.Text()
+
+		// Skip empty lines
+		if strings.TrimSpace(command) == "" {
+			continue
+		}
+
+		h.commands = append(h.commands, command)
+	}
+	return scanner.Err()
 }

@@ -101,8 +101,11 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 				return writeToFile(filename, data, appendMode)
 			}
 
-			fmt.Fprintln(os.Stdout, out)
-
+			if out == "" {
+				fmt.Fprint(os.Stdout, out)
+			} else {
+				fmt.Fprintln(os.Stdout, out)
+			}
 			return nil
 		}
 

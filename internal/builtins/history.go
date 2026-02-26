@@ -12,6 +12,7 @@ import (
 type History struct {
 	commands []string
 	mutex    sync.Mutex
+	tracker  int
 }
 
 func NewHistory() *History {
@@ -58,6 +59,7 @@ func (h *History) Display(args []string) (string, error) {
 					return "", err
 				}
 
+				h.tracker = len(h.commands)
 				return "", nil
 
 			case "-a":
@@ -65,6 +67,7 @@ func (h *History) Display(args []string) (string, error) {
 					return "", err
 				}
 
+				h.tracker = len(h.commands)
 				return "", nil
 			}
 
@@ -131,8 +134,8 @@ func (h *History) WriteHistoryToFile(filename string, appendMode bool) error {
 
 	defer file.Close()
 
-	for _, command := range h.commands {
-		builder.WriteString(fmt.Sprintf("%s\n", command))
+	for i := h.tracker; i < len(h.commands); i++ {
+		builder.WriteString(fmt.Sprintf("%s\n", h.commands[i]))
 	}
 	_, err = file.Write([]byte(builder.String()))
 	return err

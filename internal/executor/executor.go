@@ -106,6 +106,7 @@ func Execute(pipeline [][]string, builtins map[string]builtins.CommandHandler) e
 			} else {
 				fmt.Fprintln(os.Stdout, out)
 			}
+			
 			return nil
 		}
 

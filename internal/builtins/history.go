@@ -41,13 +41,20 @@ func (h *History) Display(args []string) (string, error) {
 
 	if len(args) > 0 {
 		if strings.HasPrefix(args[0], "-") {
+			if len(args) < 2 {
+				return "", fmt.Errorf("history: -r requires a filename")
+			}
+
 			switch args[0] {
 			case "-r":
-				if len(args) < 2 {
-					return "", fmt.Errorf("history: -r requires a filename")
+				if err := h.ReadHistoryFromFile(args[1]); err != nil {
+					return "", err
 				}
 
-				if err := h.ReadHistoryFromFile(args[1]); err != nil {
+				return "", nil
+
+			case "-2":
+				if err := h.WriteHistoryToFile(args[1]); err != nil {
 					return "", err
 				}
 
@@ -96,4 +103,23 @@ func (h *History) ReadHistoryFromFile(filename string) error {
 		h.commands = append(h.commands, command)
 	}
 	return scanner.Err()
+}
+
+func (h *History) WriteHistoryToFile(filename string) error {
+	var builder strings.Builder
+	flags := os.O_WRONLY | os.O_CREATE
+
+	file, err := os.OpenFile(filename, flags, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	for _, command := range h.commands {
+		builder.WriteString(fmt.Sprintf("%s\n", command))
+	}
+	_, err = file.Write([]byte(builder.String()))
+	return err
 }

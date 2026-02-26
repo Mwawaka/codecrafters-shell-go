@@ -54,12 +54,20 @@ func (h *History) Display(args []string) (string, error) {
 				return "", nil
 
 			case "-w":
-				if err := h.WriteHistoryToFile(args[1]); err != nil {
+				if err := h.WriteHistoryToFile(args[1], false); err != nil {
+					return "", err
+				}
+
+				return "", nil
+
+			case "-a":
+				if err := h.WriteHistoryToFile(args[1], true); err != nil {
 					return "", err
 				}
 
 				return "", nil
 			}
+
 		}
 
 		limit, err := strconv.Atoi(args[0])
@@ -105,9 +113,15 @@ func (h *History) ReadHistoryFromFile(filename string) error {
 	return scanner.Err()
 }
 
-func (h *History) WriteHistoryToFile(filename string) error {
+func (h *History) WriteHistoryToFile(filename string, appendMode bool) error {
 	var builder strings.Builder
 	flags := os.O_WRONLY | os.O_CREATE
+
+	if appendMode {
+		flags |= os.O_APPEND
+	} else {
+		flags |= os.O_TRUNC
+	}
 
 	file, err := os.OpenFile(filename, flags, 0644)
 

@@ -61,7 +61,12 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		t.cachedMatches = matches
 
 		if len(matches) == 1 {
-			completion := matches[0] + " "
+			completion := matches[0]
+
+			if !strings.HasSuffix(completion, "/") {
+				completion += " "
+			}
+
 			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
 		} else if len(matches) > 1 {
 			completion := lcp(matches)

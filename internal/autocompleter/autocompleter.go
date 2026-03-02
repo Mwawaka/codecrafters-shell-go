@@ -131,7 +131,7 @@ func (t *TabCompleter) listCommands(prefix string) []string {
 		}
 	}
 
-	beep(matches)
+	// beep(matches)
 	return matches
 }
 
@@ -196,7 +196,7 @@ func listExecutables(prefix string) []string {
 		}
 	}
 
-	beep(matches)
+	// beep(matches)
 	return matches
 }
 
@@ -232,9 +232,9 @@ func listFiles(prefix string) []string {
 	return matches
 }
 
-func beep(matches []string) {
-	if len(matches) == 0 {
-		os.Stdout.Write([]byte("\x07"))
-		os.Stdout.Sync()
-	}
-}
+// func beep(matches []string) {
+// 	if len(matches) == 0 {
+// 		os.Stdout.Write([]byte("\x07"))
+// 		os.Stdout.Sync()
+// 	}
+// }

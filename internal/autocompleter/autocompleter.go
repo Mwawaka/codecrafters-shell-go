@@ -70,6 +70,7 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
 		} else if len(matches) > 1 {
 			completion := lcp(matches)
+			beep(completion[len(lastWord):])
 			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
 		} else {
 			os.Stdout.Write([]byte("\x07"))
@@ -131,7 +132,7 @@ func (t *TabCompleter) listCommands(prefix string) []string {
 		}
 	}
 
-	beep(matches)
+	// beep(matches)
 	return matches
 }
 
@@ -196,7 +197,7 @@ func listExecutables(prefix string) []string {
 		}
 	}
 
-	beep(matches)
+	// beep(matches)
 	return matches
 }
 
@@ -232,7 +233,7 @@ func listFiles(prefix string) []string {
 	return matches
 }
 
-func beep(matches []string) {
+func beep(matches string) {
 	if len(matches) == 0 {
 		os.Stdout.Write([]byte("\x07"))
 		os.Stdout.Sync()

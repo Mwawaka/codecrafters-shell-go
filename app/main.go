@@ -8,7 +8,5 @@ import (
 )
 
 func main() {
-	fmt.Println(filepath.Dir("app/berry/"))
-	fmt.Println(filepath.Base("app/berry/"))
 	cmd.Cmd()
 }

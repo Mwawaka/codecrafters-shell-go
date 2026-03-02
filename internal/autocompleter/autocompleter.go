@@ -3,6 +3,7 @@ package autocompleter
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -242,9 +243,11 @@ func listExecutables(prefix string) []string {
 
 func listFiles(prefix string) []string {
 	var matches []string
+	dir := filepath.Dir(prefix)
+	base := filepath.Base(prefix)
 
 	// Read current directory
-	entries, err := os.ReadDir(".")
+	entries, err := os.ReadDir(dir)
 
 	if err != nil {
 		return matches
@@ -259,10 +262,12 @@ func listFiles(prefix string) []string {
 		}
 
 		// Check if matches prefix
-		if strings.HasPrefix(name, prefix) {
+		if strings.HasPrefix(name, base) {
 			// Add a trailing / for directories
 			if entry.IsDir() {
-				name += "/"
+				name = filepath.Join(dir, name) + "/"
+			} else {
+				name = filepath.Join(dir, name)
 			}
 
 			matches = append(matches, name)

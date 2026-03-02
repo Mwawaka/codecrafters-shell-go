@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -17,55 +16,71 @@ type TabCompleter struct {
 }
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	var isCommandPosition bool
+	var lastWord string
+
 	currentInput := string(line[:pos])
 
-	// Reset count if input changed
 	if currentInput != t.lastInput {
 		t.tabCount = 0
 		t.lastInput = currentInput
 		t.cachedMatches = nil
 	}
 
+	words := strings.Fields(currentInput)
+
+	if len(words) == 0 {
+		isCommandPosition = true
+		lastWord = ""
+	} else if len(words) == 1 && !strings.HasSuffix(currentInput, " ") {
+		isCommandPosition = true
+		lastWord = words[0]
+	} else {
+		isCommandPosition = false
+
+		if strings.HasSuffix(currentInput, " ") {
+			lastWord = ""
+		} else {
+			lastWord = words[len(words)-1]
+		}
+	}
+
 	t.tabCount++
 
 	if t.tabCount == 1 {
-		// Check builtins first
-		builtinMatches := t.listCommands(currentInput)
-		executableMatches := listExecutables(currentInput)
-		t.cachedMatches = executableMatches
+		var matches []string
 
-		if len(builtinMatches) == 1 {
-			// Autocomplete single builtin
-			completion := builtinMatches[0] + " "
-			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
+		if isCommandPosition {
+			builtinMatches := t.listCommands(lastWord)
+			executableMatches := listExecutables(lastWord)
+			matches = append(builtinMatches, executableMatches...)
+		} else {
+			matches = listFiles(lastWord)
 		}
 
-		if len(executableMatches) == 1 {
-			// Autocomplete single builtin
-			completion := executableMatches[0] + " "
-			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
-		} else if len(executableMatches) > 1 {
-			completion := lcp(executableMatches)
-			return [][]rune{[]rune(completion[len(currentInput):])}, len(currentInput)
+		t.cachedMatches = matches
+
+		if len(matches) == 1 {
+			completion := matches[0] + " "
+			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
+		} else if len(matches) > 1 {
+			completion := lcp(matches)
+			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
 		} else {
-			// No single builtin match: ring bell
 			os.Stdout.Write([]byte("\x07"))
 			os.Stdout.Sync()
-			return [][]rune{}, len(currentInput)
+			return [][]rune{}, len(lastWord)
 		}
 	}
 
 	if t.tabCount == 2 {
-		// Show executable matches
-
 		if len(t.cachedMatches) > 0 {
-			sort.Strings(t.cachedMatches)
+			slices.Sort(t.cachedMatches)
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(t.cachedMatches, "  "))
 		}
-
 		t.tabCount = 0
 		t.cachedMatches = nil
-		return [][]rune{[]rune("")}, len(currentInput)
+		return [][]rune{[]rune("")}, len(lastWord)
 	}
 
 	return nil, len(currentInput)
@@ -177,6 +192,38 @@ func listExecutables(prefix string) []string {
 	}
 
 	beep(matches)
+	return matches
+}
+
+func listFiles(prefix string) []string {
+	var matches []string
+
+	// Read current directory
+	entries, err := os.ReadDir(".")
+
+	if err != nil {
+		return matches
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+
+		//Skip hidden files
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+
+		// Check if matches prefix
+		if strings.HasPrefix(name, prefix) {
+			// Add a trailing / for directories
+			if entry.IsDir() {
+				name += "/"
+			}
+
+			matches = append(matches, name)
+		}
+	}
+
 	return matches
 }
 

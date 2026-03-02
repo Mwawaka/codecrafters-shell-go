@@ -25,7 +25,6 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		t.cachedMatches = nil
 	}
 
-	// Determine what we're completing
 	words := strings.Fields(currentInput)
 
 	var isCommandPosition bool
@@ -74,15 +73,12 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		t.cachedMatches = matches
 
 		if len(matches) == 1 {
-			// Single match: autocomplete
 			completion := matches[0]
 
-			// Add space only if not a directory
 			if !strings.HasSuffix(completion, "/") {
 				completion += " "
 			}
 
-			// For command position, use currentInput; for file position, use lastWord
 			var prefixLen int
 			if isCommandPosition {
 				prefixLen = len(currentInput)
@@ -95,9 +91,8 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		} else if len(matches) > 1 {
 			// Multiple matches: complete common prefix
 			completion := lcp(matches)
-
-			// For command position, use currentInput; for file position, use lastWord
 			var prefixLen int
+
 			if isCommandPosition {
 				prefixLen = len(currentInput)
 			} else {
@@ -114,7 +109,6 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 			return [][]rune{[]rune(addedText)}, prefixLen
 		} else {
-			// No matches: ring bell
 			os.Stdout.Write([]byte("\x07"))
 			os.Stdout.Sync()
 
@@ -179,7 +173,6 @@ func (t *TabCompleter) listCommands(prefix string) []string {
 		}
 	}
 
-	// beep(matches)
 	return matches
 }
 
@@ -244,7 +237,6 @@ func listExecutables(prefix string) []string {
 		}
 	}
 
-	// beep(matches)
 	return matches
 }
 
@@ -279,10 +271,3 @@ func listFiles(prefix string) []string {
 
 	return matches
 }
-
-// func beep(matches string) {
-// 	if len(matches) == 0 {
-// 		os.Stdout.Write([]byte("\x07"))
-// 		os.Stdout.Sync()
-// 	}
-// }

@@ -16,18 +16,20 @@ type TabCompleter struct {
 }
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-	var isCommandPosition bool
-	var lastWord string
-
 	currentInput := string(line[:pos])
 
+	// Reset count if input changed
 	if currentInput != t.lastInput {
 		t.tabCount = 0
 		t.lastInput = currentInput
 		t.cachedMatches = nil
 	}
 
+	// Determine what we're completing
 	words := strings.Fields(currentInput)
+
+	var isCommandPosition bool
+	var lastWord string
 
 	if len(words) == 0 {
 		isCommandPosition = true
@@ -37,7 +39,6 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		lastWord = words[0]
 	} else {
 		isCommandPosition = false
-
 		if strings.HasSuffix(currentInput, " ") {
 			lastWord = ""
 		} else {
@@ -61,18 +62,30 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		t.cachedMatches = matches
 
 		if len(matches) == 1 {
+			// Single match: autocomplete
 			completion := matches[0]
 
+			// Add space only if not a directory
 			if !strings.HasSuffix(completion, "/") {
 				completion += " "
 			}
 
-			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
+			addedText := completion[len(lastWord):]
+			return [][]rune{[]rune(addedText)}, len(lastWord)
 		} else if len(matches) > 1 {
+			// Multiple matches: complete common prefix
 			completion := lcp(matches)
-			beep(completion[len(lastWord):])
-			return [][]rune{[]rune(completion[len(lastWord):])}, len(lastWord)
+			addedText := completion[len(lastWord):]
+
+			// Beep if no new text added
+			if len(addedText) == 0 {
+				os.Stdout.Write([]byte("\x07"))
+				os.Stdout.Sync()
+			}
+
+			return [][]rune{[]rune(addedText)}, len(lastWord)
 		} else {
+			// No matches: ring bell
 			os.Stdout.Write([]byte("\x07"))
 			os.Stdout.Sync()
 			return [][]rune{}, len(lastWord)
@@ -84,6 +97,7 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 			slices.Sort(t.cachedMatches)
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(t.cachedMatches, "  "))
 		}
+
 		t.tabCount = 0
 		t.cachedMatches = nil
 		return [][]rune{[]rune("")}, len(lastWord)
@@ -233,9 +247,9 @@ func listFiles(prefix string) []string {
 	return matches
 }
 
-func beep(matches string) {
-	if len(matches) == 0 {
-		os.Stdout.Write([]byte("\x07"))
-		os.Stdout.Sync()
-	}
-}
+// func beep(matches string) {
+// 	if len(matches) == 0 {
+// 		os.Stdout.Write([]byte("\x07"))
+// 		os.Stdout.Sync()
+// 	}
+// }

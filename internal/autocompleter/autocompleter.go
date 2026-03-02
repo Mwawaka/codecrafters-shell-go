@@ -49,69 +49,81 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	t.tabCount++
 
 	if t.tabCount == 1 {
-    var matches []string
-    
-    if isCommandPosition {
-        builtinMatches := t.listCommands(lastWord)
-        executableMatches := listExecutables(lastWord)
-        matches = append(builtinMatches, executableMatches...)
-    } else {
-        matches = listFiles(lastWord)
-    }
-    
-    t.cachedMatches = matches
+		var matches []string
 
-    if len(matches) == 1 {
-        // Single match: autocomplete
-        completion := matches[0]
-        
-        // Add space only if not a directory
-        if !strings.HasSuffix(completion, "/") {
-            completion += " "
-        }
-        
-        // For command position, use currentInput; for file position, use lastWord
-        var prefixLen int
-        if isCommandPosition {
-            prefixLen = len(currentInput)
-        } else {
-            prefixLen = len(lastWord)
-        }
-        
-        addedText := completion[prefixLen:]
-        return [][]rune{[]rune(addedText)}, prefixLen
-    } else if len(matches) > 1 {
-        // Multiple matches: complete common prefix
-        completion := lcp(matches)
-        
-        // For command position, use currentInput; for file position, use lastWord
-        var prefixLen int
-        if isCommandPosition {
-            prefixLen = len(currentInput)
-        } else {
-            prefixLen = len(lastWord)
-        }
-        
-        addedText := completion[prefixLen:]
-        
-        // Beep if no new text added
-        if len(addedText) == 0 {
-            os.Stdout.Write([]byte("\x07"))
-            os.Stdout.Sync()
-        }
-        
-        return [][]rune{[]rune(addedText)}, prefixLen
-    } else {
-        // No matches: ring bell
-        os.Stdout.Write([]byte("\x07"))
-        os.Stdout.Sync()
-        
-        if isCommandPosition {
-            return [][]rune{}, len(currentInput)
-        }
-        return [][]rune{}, len(lastWord)
-    }
-}
+		if isCommandPosition {
+			builtinMatches := t.listCommands(lastWord)
+			executableMatches := listExecutables(lastWord)
+			matches = append(builtinMatches, executableMatches...)
+
+			seen := make(map[string]bool)
+			var unique []string
+
+			for _, match := range matches {
+				if !seen[match] {
+					unique = append(unique, match)
+					seen[match] = true
+				}
+			}
+
+			matches = unique
+		} else {
+			matches = listFiles(lastWord)
+		}
+
+		t.cachedMatches = matches
+
+		if len(matches) == 1 {
+			// Single match: autocomplete
+			completion := matches[0]
+
+			// Add space only if not a directory
+			if !strings.HasSuffix(completion, "/") {
+				completion += " "
+			}
+
+			// For command position, use currentInput; for file position, use lastWord
+			var prefixLen int
+			if isCommandPosition {
+				prefixLen = len(currentInput)
+			} else {
+				prefixLen = len(lastWord)
+			}
+
+			addedText := completion[prefixLen:]
+			return [][]rune{[]rune(addedText)}, prefixLen
+		} else if len(matches) > 1 {
+			// Multiple matches: complete common prefix
+			completion := lcp(matches)
+
+			// For command position, use currentInput; for file position, use lastWord
+			var prefixLen int
+			if isCommandPosition {
+				prefixLen = len(currentInput)
+			} else {
+				prefixLen = len(lastWord)
+			}
+
+			addedText := completion[prefixLen:]
+
+			// Beep if no new text added
+			if len(addedText) == 0 {
+				os.Stdout.Write([]byte("\x07"))
+				os.Stdout.Sync()
+			}
+
+			return [][]rune{[]rune(addedText)}, prefixLen
+		} else {
+			// No matches: ring bell
+			os.Stdout.Write([]byte("\x07"))
+			os.Stdout.Sync()
+
+			if isCommandPosition {
+				return [][]rune{}, len(currentInput)
+			}
+			return [][]rune{}, len(lastWord)
+		}
+	}
 
 	if t.tabCount == 2 {
 		if len(t.cachedMatches) > 0 {

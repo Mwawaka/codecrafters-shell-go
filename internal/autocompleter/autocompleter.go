@@ -244,6 +244,7 @@ func listExecutables(prefix string) []string {
 func listFiles(prefix string) []string {
 	var matches []string
 	var dir, base string
+
 	if strings.HasSuffix(prefix, "/") {
 		dir = prefix
 		base = ""
@@ -251,6 +252,7 @@ func listFiles(prefix string) []string {
 		dir = filepath.Dir(prefix)
 		base = filepath.Base(prefix)
 	}
+	
 	// Read current directory
 	entries, err := os.ReadDir(dir)
 

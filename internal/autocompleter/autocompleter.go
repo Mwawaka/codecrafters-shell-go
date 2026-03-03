@@ -266,14 +266,11 @@ func listFiles(prefix string) []string {
 	for _, entry := range entries {
 		name := entry.Name()
 
-		//Skip hidden files
 		if strings.HasPrefix(name, ".") {
 			continue
 		}
 
-		// Check if matches prefix
 		if strings.HasPrefix(name, base) {
-			// Add a trailing / for directories
 			if entry.IsDir() {
 				name = filepath.Join(dir, name) + "/"
 			} else {

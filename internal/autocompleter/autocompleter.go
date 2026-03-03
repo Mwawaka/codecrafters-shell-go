@@ -252,7 +252,10 @@ func listFiles(prefix string) []string {
 		dir = filepath.Dir(prefix)
 		base = filepath.Base(prefix)
 	}
-	
+
+	if base == "." {
+		base = ""
+	}
 	// Read current directory
 	entries, err := os.ReadDir(dir)
 
